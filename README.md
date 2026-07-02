@@ -33,13 +33,14 @@ OpenClaw is integrated as an optional agent runtime. CherryFlow remains responsi
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 24+
 - pnpm 10+
 - Docker Compose for PostgreSQL, Redis, and MinIO
 
 ## Start development
 
 ```bash
+nvm use
 corepack enable
 pnpm install
 cp .env.example .env
