@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { applyCors } from "./cors.js";
 import { send } from "./http-utils.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handlePublishRoutes } from "./routes-publish.js";
@@ -7,10 +8,16 @@ import { handleRuntimeRoutes } from "./routes-runtime.js";
 const port = Number(process.env.CHERRYFLOW_API_PORT ?? 4000);
 
 createServer(async (request, response) => {
+  if (applyCors(request, response)) return;
+
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   try {
     if (request.method === "GET" && url.pathname === "/health") {
-      send(response, 200, { status: "ok", service: "cherryflow-api" });
+      send(response, 200, {
+        status: "ok",
+        service: "cherryflow-api",
+        aiProvider: process.env.CHERRYFLOW_AI_PROVIDER ?? "local",
+      });
       return;
     }
     if (await handleBuilderRoutes(request, response, url.pathname)) return;
