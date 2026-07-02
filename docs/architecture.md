@@ -1,52 +1,70 @@
 # CherryFlow architecture
 
-## Responsibility split
+## Design principle
 
-CherryFlow owns workflow definitions, input/output contracts, execution state, permissions, audit logs, UI Schema validation, app publishing, and rollback.
+AI proposes. CherryFlow validates and executes.
 
-OpenClaw is an optional agent runtime. It can plan and call tools, but it must not own CherryFlow job state or publish arbitrary generated JavaScript directly.
+The model never writes or executes arbitrary browser JavaScript. It returns a constrained UI Schema whose components come from an allowlist. The renderer uses normal React components and treats all generated text as data.
 
-```text
-CherryFlow Web
-    ↓
-CherryFlow API ───── PostgreSQL
-    ↓                    ↓
-Workflow Worker ───── Redis Queue
-    │
-    ├── Deterministic modules
-    ├── Direct LLM module
-    └── OpenClaw Agent plugin
-                 ↓
-          OpenClaw Gateway
-```
-
-## AI frontend generation
-
-1. Read the workflow input/output contract.
-2. Send the user prompt and contract to the AI planner.
-3. Produce UI Schema, not executable application code.
-4. Validate component types and every input/output binding.
-5. Render with CherryFlow-approved React components.
-6. Preview, approve, version, and publish.
-
-## Security boundaries
-
-- No arbitrary JavaScript in the initial UI generator.
-- OpenClaw credentials stay server-side.
-- Agent tools use an allowlist per workspace.
-- Sensitive actions require human approval.
-- Every prompt, tool call, workflow run, and publish action is auditable.
-- Agent execution should use isolated containers or sandboxes.
-
-## Initial API surface
+## Runtime
 
 ```text
-GET  /health
-GET  /api/workflows/:workflowId
-POST /api/workflows/:workflowId/ui/generate
-POST /api/workflows/:workflowId/ui/refine
-POST /api/workflows/:workflowId/ui/validate
-POST /api/workflows/:workflowId/ui/publish
-POST /api/workflows/:workflowId/runs
-GET  /api/runs/:runId
+Builder UI
+  ├─ generate/refine prompt
+  ├─ render live preview
+  ├─ save version
+  └─ publish slug
+          ↓
+CherryFlow API
+  ├─ workflow registry
+  ├─ AI planner adapters
+  ├─ schema normalize/validate
+  ├─ version and publish store
+  └─ workflow run state machine
+          ↓
+JSON persistence (MVP)
 ```
+
+## AI provider boundary
+
+- `local`: deterministic planner for zero-configuration operation.
+- `openai`: server-side Chat Completions call with JSON output instructions.
+- `openclaw`: server-side HTTP bridge adapter. The bridge is expected to translate requests to the OpenClaw Gateway and return the final structured output.
+
+Provider failures fall back to the local planner. Invalid model output is rejected and replaced with a validated local schema.
+
+## Publish model
+
+Publishing creates an immutable version and maps a sanitized slug to that version. Rollback creates a new draft version copied from an older version; it does not mutate history.
+
+## Workflow run model
+
+A form submission creates a run in `queued` state. The API transitions it to `running`, executes the registered workflow handler, then persists `completed` outputs or a `failed` error. The browser polls the run endpoint.
+
+## MVP storage
+
+The default store is a single JSON file so a new checkout works immediately. The interfaces are intentionally separated so PostgreSQL, Redis/BullMQ, and MinIO adapters can replace it without changing the UI contract.
+
+## Security controls included
+
+- Component allowlist through discriminated TypeScript unions
+- Input/output binding validation
+- Duplicate component ID detection
+- Theme color validation
+- Prompt and title length limits
+- Request body size limit
+- Server-side provider secrets
+- No `dangerouslySetInnerHTML`
+- File size limit in the browser and API
+- Published slug sanitization
+
+## Production hardening still required
+
+- Authentication, workspaces, RBAC, and tenant isolation
+- CSRF protection and restrictive CORS
+- Durable distributed queue
+- Object storage and malware scanning
+- Rate limits and quotas
+- Audit export and retention policy
+- Encrypted secret manager
+- OpenClaw sandbox policy and tool allowlists
