@@ -3,9 +3,13 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"}},
-  "scripts": {"build": "tsc -p tsconfig.json", "typecheck": "tsc --noEmit -p tsconfig.json", "test": "tsx --test src/index.test.ts"},
-  "devDependencies": {"tsx": "^4.20.0", "typescript": "^5.8.3"}
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "tsx --test src/index.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.3"
+  }
 }
