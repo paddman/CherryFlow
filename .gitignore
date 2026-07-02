@@ -6,4 +6,6 @@ coverage
 .env
 .env.*
 !.env.example
+data/*.json
+data/uploads
 .DS_Store

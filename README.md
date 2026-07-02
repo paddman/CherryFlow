@@ -1,75 +1,90 @@
 # CherryFlow
 
-CherryFlow is an AI-first workflow and app builder. Users assemble reusable modules, upload or enter data, run deterministic or agent-based steps, and publish a generated frontend for each workflow.
+CherryFlow is an AI-first workflow and app builder. Describe the app you need, let an AI planner produce a safe UI Schema, preview the working form, run the workflow, save versions, and publish the result as a public URL.
 
-## Included in this scaffold
+## What works now
 
-- TypeScript monorepo with pnpm workspaces
-- Minimal CherryFlow API
-- AI App Builder screen
-- Shared Workflow Contract and UI Schema types
-- UI Schema binding validator
-- OpenClaw client plugin boundary
-- PostgreSQL, Redis, and MinIO development services
-- Architecture and security notes
+- Prompt-to-UI generation with three provider modes: `local`, `openai`, and `openclaw`
+- Safe allowlisted UI Schema instead of arbitrary generated JavaScript
+- Live React preview with form controls and file upload
+- Workflow execution with queued/running/completed/failed states
+- Polling and rendered text, table, and downloadable file outputs
+- Save draft versions, publish by slug, list versions, and rollback
+- Public runtime route at `/apps/{slug}`
+- JSON-file persistence for the runnable MVP
+- Node.js 24+, TypeScript, Next.js App Router, and a dependency-light Node API
 
 ## Architecture
 
 ```text
-Workflow Definition
-        ↓
-Input / Output Contract
-        ↓
-Deterministic Nodes + Agent Nodes
-        ↓
-Validated UI Schema
-        ↓
-CherryFlow Renderer
-        ↓
-Preview / Approve / Publish
+Prompt + Workflow Contract
+          ↓
+AI Planner (local / OpenAI-compatible / OpenClaw bridge)
+          ↓
+Normalize + Validate UI Schema
+          ↓
+React Live Preview
+          ↓
+Save Version → Publish Slug → Public App
+          ↓
+Submit Form → Workflow Run → Poll Status → Render Output
 ```
 
-OpenClaw is integrated as an optional agent runtime. CherryFlow remains responsible for workflow state, permissions, audit logs, publishing, and rollback.
+CherryFlow owns workflow state, schema validation, permissions, versioning, publishing, and audit-ready run records. AI providers only propose UI Schema.
 
 ## Requirements
 
 - Node.js 24+
 - pnpm 10+
-- Docker Compose for PostgreSQL, Redis, and MinIO
+- Docker Compose only when using the optional PostgreSQL, Redis, or MinIO services
 
-## Start development
+## Start
 
 ```bash
 nvm use
 corepack enable
 pnpm install
 cp .env.example .env
-docker compose up -d
 pnpm dev
 ```
 
 Open:
 
-- Web: `http://localhost:3000`
+- Builder: `http://localhost:3000`
 - API health: `http://localhost:4000/health`
+- Published app example after publishing: `http://localhost:3000/apps/{slug}`
 
-## Current demo
+The default `CHERRYFLOW_AI_PROVIDER=local` requires no model and still creates varied, validated pages from Thai or English prompts.
 
-The web screen sends a prompt to:
+## Connect a local model
 
-```text
-POST /api/workflows/report-generator/ui/generate
+```env
+CHERRYFLOW_AI_PROVIDER=openai
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=local
+OPENAI_MODEL=qwen3.5-35b-a3b
 ```
 
-The API creates a UI Schema, validates every input/output binding against the workflow contract, and returns the generated schema for preview.
+## Main endpoints
 
-## Next milestones
+```text
+GET  /api/workflows
+GET  /api/workflows/:workflowId
+POST /api/workflows/:workflowId/ui/generate
+POST /api/workflows/:workflowId/ui/refine
+POST /api/workflows/:workflowId/ui/validate
+POST /api/workflows/:workflowId/ui/save
+GET  /api/workflows/:workflowId/ui/versions
+POST /api/workflows/:workflowId/ui/publish
+POST /api/workflows/:workflowId/ui/rollback
+POST /api/workflows/:workflowId/runs
+GET  /api/runs/:runId
+GET  /api/apps/:slug
+POST /api/apps/:slug/run
+```
 
-1. Persist workflows, UI versions, and runs in PostgreSQL.
-2. Add Redis-backed workers and execution events.
-3. Add real LLM provider adapters.
-4. Render UI Schema as interactive forms and outputs.
-5. Add OpenClaw gateway authentication and streaming run status.
-6. Add approval, publishing, version history, and rollback.
+## Scope
 
-See [docs/architecture.md](docs/architecture.md) and [Issue #1](https://github.com/paddman/CherryFlow/issues/1).
+This is a complete runnable MVP for auto-generating and publishing workflow frontends. Production multi-tenancy, SSO/RBAC, distributed queues, object storage, database migrations, rate limiting, and isolated agent sandboxes remain deployment hardening work.
+
+See `docs/architecture.md` and `docs/ai-providers.md`.
