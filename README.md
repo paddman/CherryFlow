@@ -1,21 +1,24 @@
 # CherryFlow
 
-CherryFlow is an AI-first workflow and app builder. Users compose reusable workflow modules, upload or enter data, run deterministic and agent-based steps, then publish a generated frontend for the workflow.
+CherryFlow is an AI-first workflow and app builder. Users assemble reusable modules, upload or enter data, run deterministic or agent-based steps, and publish a generated frontend for each workflow.
 
-## Core direction
+## Included in this scaffold
 
-- Workflow engine for reusable modules
-- AI Frontend Generator based on validated UI Schema
-- OpenClaw integration as an optional agent runtime plugin
-- Human approval, audit logs, versioning, and rollback
-- TypeScript-first monorepo with Python services only where AI/ML tooling requires it
+- TypeScript monorepo with pnpm workspaces
+- Minimal CherryFlow API
+- AI App Builder screen
+- Shared Workflow Contract and UI Schema types
+- UI Schema binding validator
+- OpenClaw client plugin boundary
+- PostgreSQL, Redis, and MinIO development services
+- Architecture and security notes
 
-## Planned architecture
+## Architecture
 
 ```text
 Workflow Definition
         ↓
-Input / Output Schema
+Input / Output Contract
         ↓
 Deterministic Nodes + Agent Nodes
         ↓
@@ -26,4 +29,46 @@ CherryFlow Renderer
 Preview / Approve / Publish
 ```
 
-Development starts in feature branches and is merged through pull requests.
+OpenClaw is integrated as an optional agent runtime. CherryFlow remains responsible for workflow state, permissions, audit logs, publishing, and rollback.
+
+## Requirements
+
+- Node.js 22+
+- pnpm 10+
+- Docker Compose for PostgreSQL, Redis, and MinIO
+
+## Start development
+
+```bash
+corepack enable
+pnpm install
+cp .env.example .env
+docker compose up -d
+pnpm dev
+```
+
+Open:
+
+- Web: `http://localhost:3000`
+- API health: `http://localhost:4000/health`
+
+## Current demo
+
+The web screen sends a prompt to:
+
+```text
+POST /api/workflows/report-generator/ui/generate
+```
+
+The API creates a UI Schema, validates every input/output binding against the workflow contract, and returns the generated schema for preview.
+
+## Next milestones
+
+1. Persist workflows, UI versions, and runs in PostgreSQL.
+2. Add Redis-backed workers and execution events.
+3. Add real LLM provider adapters.
+4. Render UI Schema as interactive forms and outputs.
+5. Add OpenClaw gateway authentication and streaming run status.
+6. Add approval, publishing, version history, and rollback.
+
+See [docs/architecture.md](docs/architecture.md) and [Issue #1](https://github.com/paddman/CherryFlow/issues/1).
