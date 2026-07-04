@@ -1,6 +1,6 @@
 {
   "name": "@cherryflow/api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@cherryflow/openclaw-adapter": "workspace:0.2.0",
-    "@cherryflow/ui-schema": "workspace:0.2.0"
+    "@cherryflow/ui-schema": "workspace:0.3.0",
+    "@cherryflow/workflow-engine": "workspace:0.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
