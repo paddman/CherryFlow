@@ -62,16 +62,17 @@ test("requires an approval reference for protected agent actions", async () => {
   });
 
   await assert.rejects(
-    () =>
-      module.run({
+    async () => {
+      await module.run({
         workflowInputs: {},
         dependencies: {},
         config: {
-          prompt: "Restart the container",
+          prompt: "Apply the approved configuration change",
           requiresApproval: true,
           riskLevel: "write",
         },
-      }),
+      });
+    },
     /requires an approvalId/,
   );
 });
