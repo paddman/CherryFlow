@@ -1,11 +1,19 @@
-# OpenClaw Integration
+# OpenClawXCherry Runtime Integration
 
-CherryFlow and OpenClaw solve different parts of the automation stack:
+OpenClawXCherry is the agent execution runtime created for CherryFlow. It is not treated as a separate general-purpose product integration.
 
-- **CherryFlow** owns workflow definitions, graph validation, run state, retries, schedules, approvals, files, versions, and audit history.
-- **OpenClaw** owns agent execution, tool use, messaging channels, sessions, memory, and host or device interaction.
+- **CherryFlow** is the product and control plane. It owns workflow definitions, graph validation, run state, retries, schedules, approvals, files, versions, tenants, and audit history.
+- **OpenClawXCherry** is the execution plane. It owns agent execution, tools, messaging channels, sessions, memory, local models, and host or device interaction.
 
-The integration is deliberately based on an explicit HTTP contract. CherryFlow does not depend on private OpenClaw Gateway frame formats.
+The runtime boundary uses an explicit HTTP contract so CherryFlow does not depend on private Gateway frame formats.
+
+The existing compatibility names remain:
+
+- Workflow module type: `agent.openclaw`
+- Provider value: `openclaw`
+- Environment variables: `OPENCLAW_*`
+
+These names are retained to avoid unnecessary breaking changes. The deployed component is OpenClawXCherry.
 
 ## Architecture
 
@@ -13,26 +21,28 @@ The integration is deliberately based on an explicit HTTP contract. CherryFlow d
 LINE / Web / API / Schedule
             |
             v
-      CherryFlow workflow
+       CherryFlow product
+ workflow · state · approval · audit
             |
             v
-     agent.openclaw node
+      agent.openclaw node
             |
             v
-   OpenClaw bridge HTTP API
+ OpenClawXCherry Runtime API
             |
             v
- Agent session + approved tools
+ agent session · approved tools · local models
 ```
 
-## Required OpenClaw bridge endpoints
+## Runtime endpoints
 
 ```http
 POST /api/agents/run
 GET /api/agents/runs/:runId
+GET /api/agents/health
 ```
 
-The current CherryFlow adapter creates an agent run and polls the run endpoint until it reaches `completed` or `failed`.
+The CherryFlow adapter creates an agent run and polls the runtime until it reaches `completed` or `failed`.
 
 ### Create an agent run
 
@@ -59,7 +69,7 @@ The current CherryFlow adapter creates an agent run and polls the run endpoint u
 }
 ```
 
-CherryFlow sends the API token through the `x-openclaw-token` header.
+CherryFlow sends the shared runtime token through the `x-openclaw-token` header.
 
 ### Agent run response
 
@@ -82,7 +92,7 @@ A completed run may return any JSON value in `output`. Object outputs are merged
 
 ```env
 CHERRYFLOW_AI_PROVIDER=openclaw
-OPENCLAW_BRIDGE_URL=http://localhost:18790
+OPENCLAW_BRIDGE_URL=http://openclawxcherry:18789
 OPENCLAW_API_TOKEN=change-me
 OPENCLAW_AGENT_ID=cherryflow-agent
 ```
@@ -110,8 +120,8 @@ Supported configuration fields:
 
 | Field | Required | Description |
 |---|---:|---|
-| `prompt` | Yes | Instruction sent to the OpenClaw agent |
-| `agentId` | No | Agent identifier; defaults to `OPENCLAW_AGENT_ID` |
+| `prompt` | Yes | Instruction sent to the OpenClawXCherry runtime agent |
+| `agentId` | No | Runtime agent identifier; defaults to `OPENCLAW_AGENT_ID` |
 | `riskLevel` | No | Metadata such as `read`, `write`, or `dangerous` |
 | `requiresApproval` | No | Requires an explicit approval reference before execution |
 | `approvalId` | Conditional | Required when `requiresApproval` is `true`; may also come from workflow inputs |
@@ -122,7 +132,7 @@ Supported configuration fields:
 
 ## Approval behavior
 
-CherryFlow performs a fail-closed precondition check for protected agent nodes:
+CherryFlow performs a fail-closed precondition check for protected runtime nodes:
 
 ```json
 {
@@ -135,13 +145,13 @@ CherryFlow performs a fail-closed precondition check for protected agent nodes:
 }
 ```
 
-This node fails before contacting OpenClaw unless an `approvalId` is present in either node configuration or workflow inputs.
+This node fails before contacting OpenClawXCherry unless an `approvalId` is present in either node configuration or workflow inputs.
 
 The current check proves that an approval reference was supplied. A production approval service must additionally verify that the approval exists, is unexpired, belongs to the same tenant and workflow run, and covers the requested action.
 
-## Recommended production correlation fields
+## Production correlation fields
 
-Use stable identifiers so logs can be traced across both systems:
+Use stable identifiers so one operation can be traced from CherryFlow into its runtime:
 
 ```json
 {
@@ -163,15 +173,16 @@ Use stable identifiers so logs can be traced across both systems:
 
 ```text
 Grafana webhook
-  -> collect metrics
-  -> agent.openclaw diagnosis (read-only)
-  -> human approval
-  -> agent.openclaw remediation (write)
-  -> health verification
-  -> LINE notification
+  -> CherryFlow collects metrics
+  -> OpenClawXCherry diagnosis agent (read-only)
+  -> CherryFlow human approval
+  -> OpenClawXCherry remediation agent (restricted write tools)
+  -> CherryFlow verifies service health
+  -> OpenClawXCherry sends LINE notification
+  -> CherryFlow records and closes the incident
 ```
 
-Keep diagnosis and remediation as separate agent nodes. The diagnosis node should use read-only tools. The remediation node should require approval and a narrower tool allowlist.
+Keep diagnosis and remediation as separate runtime agents. The diagnosis agent should use read-only tools. The remediation agent should require approval and a narrower tool allowlist.
 
 ## Current limitations
 
