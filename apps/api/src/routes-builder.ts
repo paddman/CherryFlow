@@ -1,13 +1,28 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { validateWorkflowGraph } from "@cherryflow/workflow-engine";
 import type { UiSchema } from "@cherryflow/ui-schema";
 import { validateUiSchema } from "@cherryflow/ui-schema";
 import { matchWorkflow, readJson, send } from "./http-utils.js";
+import { moduleRegistry } from "./module-registry.js";
 import { planUiSchema } from "./planner.js";
 import { getWorkflow, listWorkflows } from "./workflows.js";
 
 export async function handleBuilderRoutes(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
+  if (request.method === "GET" && pathname === "/api/modules") {
+    send(response, 200, { modules: moduleRegistry.list() });
+    return true;
+  }
+
   if (request.method === "GET" && pathname === "/api/workflows") {
     send(response, 200, { workflows: listWorkflows() });
+    return true;
+  }
+
+  const graphGet = matchWorkflow(pathname, "/graph");
+  if (request.method === "GET" && graphGet) {
+    const definition = getWorkflow(decodeURIComponent(graphGet[1] ?? ""));
+    if (!definition) send(response, 404, { error: "Workflow not found" });
+    else send(response, 200, { graph: definition.graph, validation: validateWorkflowGraph(definition.graph, moduleRegistry) });
     return true;
   }
 
