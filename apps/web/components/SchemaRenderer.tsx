@@ -72,8 +72,9 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
       <div className="runtimeCanvas">
         {schema.page.components.map((component) => {
           if (component.type === "workflow-form") return (
-            <section className="contentCard formCard" key={component.id}>
+            <section id={component.id} className="contentCard formCard" key={component.id}>
               {component.title && <h2>{component.title}</h2>}
+              {component.description && <p className="muted">{component.description}</p>}
               <div className="formGrid">{component.fields.map((name) => {
                 const field = workflow.inputs.find((item) => item.name === name);
                 return field ? <RuntimeField key={name} field={field} value={values[name]} onChange={(value) => setValues((current) => ({ ...current, [name]: value }))} /> : null;
@@ -84,11 +85,18 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
           );
 
           if (component.type === "job-progress") return (
-            <section className="contentCard progressCard" key={component.id}><div><h2>{component.title ?? "สถานะ"}</h2><p>{run ? `Run ID: ${run.id}` : "ยังไม่ได้เริ่ม"}</p></div><span className={`status status-${run?.status ?? "idle"}`}>{run?.status ?? "idle"}</span></section>
+            <section id={component.id} className="contentCard progressCard" key={component.id}>
+              <div>
+                <h2>{component.title ?? "สถานะ"}</h2>
+                <p>{run ? `Run ID: ${run.id}` : "ยังไม่ได้เริ่ม"}</p>
+                {run?.steps && run.steps.length > 0 && <ul className="nodeSteps">{run.steps.map((step, index) => <li key={`${step.nodeId}-${step.status}-${index}`}><span>{step.nodeId}</span><small>{step.moduleType}</small><strong className={`step-${step.status}`}>{step.status}</strong></li>)}</ul>}
+              </div>
+              <span className={`status status-${run?.status ?? "idle"}`}>{run?.status ?? "idle"}</span>
+            </section>
           );
 
           if (component.type === "workflow-output") return (
-            <section className="contentCard outputCard" key={component.id}><h2>{component.title ?? "ผลลัพธ์"}</h2>
+            <section id={component.id} className="contentCard outputCard" key={component.id}><h2>{component.title ?? "ผลลัพธ์"}</h2>
               {!run?.outputs && <p className="muted">{component.emptyText ?? "ยังไม่มีผลลัพธ์"}</p>}
               {component.bindings.map((binding) => { const output = workflow.outputs.find((item) => item.name === binding); return output && run?.outputs ? <article className="outputBlock" key={binding}><h3>{output.label}</h3><RuntimeOutput value={run.outputs[binding]} /></article> : null; })}
               {run?.status === "failed" && <p className="errorMessage">{run.error}</p>}
