@@ -1,5 +1,6 @@
 import { ModuleRegistry, type WorkflowData } from "@cherryflow/workflow-engine";
 import type { FileOutputValue, UploadedFileValue } from "@cherryflow/ui-schema";
+import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 
 function isUploadedFile(value: unknown): value is UploadedFileValue {
   return Boolean(value && typeof value === "object" && "name" in value && "dataUrl" in value && "size" in value);
@@ -87,6 +88,7 @@ export const moduleRegistry = new ModuleRegistry()
       };
     },
   })
+  .register(createOpenClawModuleDefinition())
   .register({
     type: "core.output",
     label: "Workflow Output",
