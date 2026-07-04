@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 
-test("runs an OpenClaw agent and returns traceable workflow output", async (context) => {
+test("runs an OpenClawXCherry agent and returns traceable workflow output", async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {
     globalThis.fetch = originalFetch;
@@ -17,6 +17,10 @@ test("runs an OpenClaw agent and returns traceable workflow output", async (cont
     assert.equal(body.agentId, "linux-doctor");
     assert.equal(body.prompt, "Inspect the host");
     assert.equal(body.idempotencyKey, "workflow-run-1");
+    assert.equal(
+      (body.context as { cherryFlow?: { runtime?: string } }).cherryFlow?.runtime,
+      "openclawxcherry",
+    );
 
     return new Response(
       JSON.stringify({
@@ -46,6 +50,7 @@ test("runs an OpenClaw agent and returns traceable workflow output", async (cont
   assert.deepEqual(output, {
     diagnosis: "healthy",
     agentRunId: "agent-run-1",
+    runtime: "openclawxcherry",
     status: "completed",
   });
 });
