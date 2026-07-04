@@ -205,7 +205,7 @@ export function createPostgresStore(
         WHERE workflow_id = ${workflowId}
         ORDER BY created_at DESC
       `;
-      return [...rows].map(mapVersion);
+      return [...rows].map((row) => mapVersion(row));
     },
 
     async getVersion(versionId): Promise<AppVersion | undefined> {
