@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./styles.css";
+import "./site.css";
 
 export const metadata: Metadata = {
-  title: "CherryFlow AI App Builder",
-  description: "Generate, preview, run, version, and publish workflow frontends with AI.",
+  title: "CherryFlow AI Website & Workflow Builder",
+  description: "Generate, preview, run, version, and publish workflow websites with AI.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
