@@ -4,8 +4,8 @@ import "./styles.css";
 import "./site-entry.css";
 
 export const metadata: Metadata = {
-  title: "CherryFlow AI Website & Workflow Builder",
-  description: "Generate, preview, run, version, and publish workflow websites with AI.",
+  title: "CherryFlow — AI Workflow & Website Builder",
+  description: "สร้าง Workflow เชื่อม AI และ Publish เป็นเว็บไซต์พร้อมใช้งานจากแพลตฟอร์มเดียว",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
