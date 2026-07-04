@@ -5,6 +5,7 @@ import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
+import { getStoreHealth } from "./store.js";
 
 const port = Number(process.env.CHERRYFLOW_API_PORT ?? 4000);
 
@@ -14,10 +15,13 @@ createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   try {
     if (request.method === "GET" && url.pathname === "/health") {
-      send(response, 200, {
-        status: "ok",
+      const storage = await getStoreHealth();
+      const healthy = storage.status === "ok";
+      send(response, healthy ? 200 : 503, {
+        status: healthy ? "ok" : "degraded",
         service: "cherryflow-api",
         aiProvider: process.env.CHERRYFLOW_AI_PROVIDER ?? "local",
+        storage,
       });
       return;
     }
