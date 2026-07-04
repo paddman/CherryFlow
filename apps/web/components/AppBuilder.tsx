@@ -33,6 +33,7 @@ export function AppBuilder({ workflowId }: { workflowId: string }) {
   const [error, setError] = useState("");
 
   const publicUrl = useMemo(() => typeof window === "undefined" ? `/apps/${sanitizeSlug(slug)}` : `${window.location.origin}/apps/${sanitizeSlug(slug)}`, [slug]);
+  const outputNodeId = graph?.graph.outputNodeId;
 
   async function refreshVersions() {
     const result = await requestJson<{ versions: Version[] }>(`/api/workflows/${workflowId}/ui/versions`);
@@ -85,7 +86,7 @@ export function AppBuilder({ workflowId }: { workflowId: string }) {
         <div className="workspaceBody">
           {!schema && tab === "preview" && <section className="builderEmpty"><div className="emptyIcon">✦</div><h2>พร้อมสร้างเว็บไซต์จาก Workflow</h2><p>ใส่ Prompt แล้วกด Generate Website</p></section>}
           {schema && tab === "preview" && workflow && <div className="previewFrame"><SchemaRenderer schema={schema} workflow={workflow} runPath={`/api/workflows/${workflowId}/runs`} /></div>}
-          {tab === "flow" && <section className="flowPanel"><header><div><h2>Workflow Graph</h2><p>{graph?.validation.valid ? "Graph validated" : "Graph needs attention"}</p></div><strong>{graph?.graph.nodes.length ?? 0} Nodes</strong></header><div className="flowGrid">{graph?.graph.nodes.map((node, index) => <article key={node.id}><span>{index + 1}</span><div><strong>{node.id}</strong><small>{node.moduleType}</small></div>{graph.graph.outputNodeId === node.id && <em>OUTPUT</em>}</article>)}</div>{graph && graph.graph.edges.length > 0 && <p className="flowEdges">{graph.graph.edges.map((edge) => `${edge.from} → ${edge.to}`).join("  ·  ")}</p>}</section>}
+          {tab === "flow" && <section className="flowPanel"><header><div><h2>Workflow Graph</h2><p>{graph?.validation.valid ? "Graph validated" : "Graph needs attention"}</p></div><strong>{graph?.graph.nodes.length ?? 0} Nodes</strong></header><div className="flowGrid">{graph?.graph.nodes.map((node, index) => <article key={node.id}><span>{index + 1}</span><div><strong>{node.id}</strong><small>{node.moduleType}</small></div>{outputNodeId === node.id && <em>OUTPUT</em>}</article>)}</div>{graph && graph.graph.edges.length > 0 && <p className="flowEdges">{graph.graph.edges.map((edge) => `${edge.from} → ${edge.to}`).join("  ·  ")}</p>}</section>}
           {schema && tab === "schema" && <section className="schemaPanel"><pre>{JSON.stringify(schema, null, 2)}</pre></section>}
           {tab === "versions" && <section className="versionsPanel"><h2>Version History</h2>{versions.length === 0 && <p className="muted">ยังไม่มี Version</p>}{versions.map((version) => <article className="versionRow" key={version.id}><div><strong>{version.schema.meta.name}</strong><p>{new Date(version.createdAt).toLocaleString("th-TH")} · {version.status}</p></div><button className="secondaryButton" onClick={() => rollback(version.id)}>Restore as Draft</button></article>)}</section>}
         </div>
