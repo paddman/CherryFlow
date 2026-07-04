@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { applyCors } from "./cors.js";
 import { send } from "./http-utils.js";
+import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
@@ -20,6 +21,7 @@ createServer(async (request, response) => {
       });
       return;
     }
+    if (await handleAgentRoutes(request, response, url.pathname)) return;
     if (await handleBuilderRoutes(request, response, url.pathname)) return;
     if (await handlePublishRoutes(request, response, url.pathname)) return;
     if (await handleRuntimeRoutes(request, response, url.pathname)) return;
