@@ -1,36 +1,88 @@
 # CherryFlow
 
-CherryFlow is an AI-first workflow and website builder. It creates a validated website from a workflow contract, publishes the result, and runs the workflow through a module graph.
+CherryFlow is a local-first AI workflow platform focused on Qwen models, OpenAI-compatible APIs, workflow automation, and reusable machine learning and deep learning modules.
+
+## Architecture
+
+```text
+Local Qwen Model
+      ↓
+OpenAI-compatible API
+      ↓
+CherryFlow Provider Adapter
+      ↓
+Workflow Graph + Module Registry
+      ↓
+CPU / Document / Agent / GPU Workers
+      ↓
+Website / API / File / Database / Notification Output
+```
+
+## Product focus
+
+- Run Qwen through vLLM, SGLang, Ollama, or another compatible inference server
+- Connect models through an OpenAI-compatible API boundary
+- Build deterministic, AI, agent, machine learning, and deep learning workflows
+- Generate websites and internal applications from workflow contracts
+- Route jobs to CPU, document, agent, or GPU worker pools
+- Version, publish, monitor, and roll back workflow applications
 
 ## Available now
 
-- Generate a website from Thai or English prompts
-- Local, OpenAI-compatible, and OpenClaw planner modes
-- Navbar, hero, statistics, feature cards, steps, FAQ, form, progress, results, callout, and footer sections
-- Live preview, prompt refinement, draft versions, publishing, and rollback
-- Public pages at `/apps/{slug}`
-- Workflow graph validation and ordered module execution
-- Per-node run events and final workflow outputs
-- Local JSON persistence for the MVP
+- Local deterministic planner
+- OpenAI-compatible model provider
+- Qwen-compatible endpoint configuration
+- OpenClaw adapter
+- Workflow graph engine and module registry
+- Per-node run status
+- Website generation from Thai or English prompts
+- Live preview, refinement, versioning, publishing, and rollback
+- Public applications at `/apps/{slug}`
+- Builder interface at `/builder`
+
+## Local Qwen configuration
+
+```env
+CHERRYFLOW_AI_PROVIDER=openai
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=local
+OPENAI_MODEL=qwen3.5-35b-a3b
+```
+
+The provider name `openai` identifies the API protocol. The model can run on local infrastructure.
 
 ## Runtime
 
 ```text
-Prompt + Workflow Contract
-          ↓
-Validated UI Schema
-          ↓
-Preview → Save → Publish Website
-          ↓
-Form → Workflow Graph → Modules → Output
+Prompt / API / Form / Webhook
+             ↓
+        CherryFlow API
+             ↓
+ Workflow Graph and Module Runner
+             ↓
+ Deterministic / AI / Agent / ML-DL Modules
+             ↓
+ Text / Table / File / Database / Notification / Website
 ```
 
-## Requirements
+## Machine learning and deep learning direction
+
+Planned module groups:
+
+- Data loading, cleaning, feature preparation, and train/test split
+- Classification, regression, clustering, anomaly detection, and forecasting
+- OCR, document understanding, image classification, object detection, speech-to-text, and embeddings
+- Training jobs, experiment tracking, model registry, deployment, and monitoring
+- GPU worker routing, scheduling, quotas, and usage accounting
+
+See [`docs/local-ai-stack.md`](docs/local-ai-stack.md) for the target architecture.
+
+## Start development
+
+Requirements:
 
 - Node.js 24+
 - pnpm 10+
-
-## Start
 
 ```bash
 nvm use
@@ -42,20 +94,10 @@ pnpm dev
 
 Open:
 
-- Builder: `http://localhost:3000`
+- Homepage: `http://localhost:3000`
+- Builder: `http://localhost:3000/builder`
 - API health: `http://localhost:4000/health`
-- Published website: `http://localhost:3000/apps/{slug}`
-
-The default provider is `local`. Add `website`, `landing`, `เว็บไซต์`, or `หน้าเว็บ` to the prompt to generate the full website template.
-
-## Local model
-
-```env
-CHERRYFLOW_AI_PROVIDER=openai
-OPENAI_BASE_URL=http://localhost:8000/v1
-OPENAI_API_KEY=local
-OPENAI_MODEL=qwen3.5-35b-a3b
-```
+- Published app: `http://localhost:3000/apps/{slug}`
 
 ## API
 
@@ -84,4 +126,6 @@ POST /api/apps/:slug/run
 - `report.compose`
 - `core.output`
 
-This repository is a runnable MVP. Production deployment still needs PostgreSQL migrations, distributed workers, object storage, authentication, RBAC, quotas, rate limits, and secret management.
+## Roadmap
+
+See [`docs/roadmap.md`](docs/roadmap.md). The current repository is a runnable MVP. PostgreSQL persistence, Redis workers, MinIO/S3 storage, authentication, visual workflow editing, ML/DL workers, and model operations are planned milestones.
