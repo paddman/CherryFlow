@@ -35,13 +35,16 @@ function normalizeAgentOutput(output: unknown): WorkflowData {
 export function createOpenClawModuleDefinition(env: NodeJS.ProcessEnv = process.env): ModuleDefinition {
   return {
     type: "agent.openclaw",
-    label: "OpenClaw Agent",
-    description: "Run an OpenClaw agent through the explicit CherryFlow bridge contract.",
+    label: "OpenClawXCherry Agent",
+    description: "Run an agent in CherryFlow's OpenClawXCherry execution runtime.",
     run: async ({ workflowInputs, dependencies, config }) => {
       const prompt = requiredString(config.prompt, "agent.openclaw requires config.prompt");
       const agentId = optionalString(config.agentId, env.OPENCLAW_AGENT_ID) ?? "cherryflow-agent";
       const bridgeUrl = optionalString(env.OPENCLAW_BRIDGE_URL) ?? "http://localhost:18790";
-      const token = requiredString(env.OPENCLAW_API_TOKEN, "OPENCLAW_API_TOKEN is required for agent.openclaw");
+      const token = requiredString(
+        env.OPENCLAW_API_TOKEN,
+        "OPENCLAW_API_TOKEN is required for the OpenClawXCherry runtime",
+      );
       const timeoutMs = boundedInteger(config.timeoutMs, 60_000, 1_000, 600_000, "timeoutMs");
       const pollIntervalMs = boundedInteger(config.pollIntervalMs, 800, 100, 10_000, "pollIntervalMs");
       const idempotencyKey = optionalString(config.idempotencyKey, workflowInputs.idempotencyKey) ?? crypto.randomUUID();
@@ -62,6 +65,7 @@ export function createOpenClawModuleDefinition(env: NodeJS.ProcessEnv = process.
           workflowInputs,
           dependencies,
           cherryFlow: {
+            runtime: "openclawxcherry",
             moduleType: "agent.openclaw",
             riskLevel: optionalString(config.riskLevel) ?? "read",
             requiresApproval,
@@ -70,12 +74,15 @@ export function createOpenClawModuleDefinition(env: NodeJS.ProcessEnv = process.
         },
       });
 
-      if (result.status === "failed") throw new Error(result.error ?? "OpenClaw agent failed");
-      if (result.status !== "completed") throw new Error(`OpenClaw agent returned unexpected status: ${result.status}`);
+      if (result.status === "failed") throw new Error(result.error ?? "OpenClawXCherry agent failed");
+      if (result.status !== "completed") {
+        throw new Error(`OpenClawXCherry agent returned unexpected status: ${result.status}`);
+      }
 
       return {
         ...normalizeAgentOutput(result.output),
         agentRunId: result.runId,
+        runtime: "openclawxcherry",
         status: result.status,
       };
     },
