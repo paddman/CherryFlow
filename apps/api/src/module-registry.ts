@@ -1,5 +1,6 @@
 import { ModuleRegistry, type WorkflowData } from "@cherryflow/workflow-engine";
 import type { FileOutputValue, UploadedFileValue } from "@cherryflow/ui-schema";
+import { createCherryAgentModuleDefinition } from "./cherry-agent.js";
 import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 
 function isUploadedFile(value: unknown): value is UploadedFileValue {
@@ -88,6 +89,7 @@ export const moduleRegistry = new ModuleRegistry()
       };
     },
   })
+  .register(createCherryAgentModuleDefinition())
   .register(createOpenClawModuleDefinition())
   .register({
     type: "core.output",
