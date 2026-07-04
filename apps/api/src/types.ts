@@ -1,4 +1,5 @@
-import type { UiSchema, WorkflowContract, WorkflowInputValues, WorkflowOutputValues, WorkflowRun } from "@cherryflow/ui-schema";
+import type { WorkflowGraph } from "@cherryflow/workflow-engine";
+import type { UiSchema, WorkflowContract, WorkflowRun } from "@cherryflow/ui-schema";
 
 export interface AppVersion {
   id: string;
@@ -24,5 +25,5 @@ export interface StoreData {
 
 export interface WorkflowDefinition {
   contract: WorkflowContract;
-  execute: (inputs: WorkflowInputValues) => Promise<WorkflowOutputValues>;
+  graph: WorkflowGraph;
 }
