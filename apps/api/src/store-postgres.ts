@@ -10,75 +10,92 @@ import { sanitizeSlug } from "@cherryflow/ui-schema";
 import type { CherryFlowStore, StoreHealth } from "./store-contract.js";
 import type { AppVersion, PublishedApp } from "./types.js";
 
-interface VersionRow {
-  id: string;
-  workflow_id: string;
-  schema: unknown;
-  prompt: string;
-  created_at: Date | string;
-  status: AppVersion["status"];
+type DatabaseRow = Record<string, unknown>;
+
+function asRow(value: unknown): DatabaseRow {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("PostgreSQL returned an invalid row");
+  }
+  return value as DatabaseRow;
 }
 
-interface PublishedAppRow {
-  slug: string;
-  workflow_id: string;
-  version_id: string;
-  published_at: Date | string;
+function rowString(row: DatabaseRow, key: string): string {
+  const value = row[key];
+  if (typeof value !== "string") throw new Error(`PostgreSQL column ${key} must be a string`);
+  return value;
 }
 
-interface RunRow {
-  id: string;
-  workflow_id: string;
-  status: WorkflowRun["status"];
-  created_at: Date | string;
-  updated_at: Date | string;
-  inputs: unknown;
-  outputs: unknown | null;
-  steps: unknown | null;
-  error: string | null;
+function rowDate(row: DatabaseRow, key: string): string {
+  const value = row[key];
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  throw new Error(`PostgreSQL column ${key} must be a date`);
 }
 
-function iso(value: Date | string): string {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-}
-
-function jsonValue<T>(value: unknown): T {
+function rowJson<T>(row: DatabaseRow, key: string): T {
+  const value = row[key];
   if (typeof value === "string") return JSON.parse(value) as T;
   return value as T;
 }
 
-function mapVersion(row: VersionRow): AppVersion {
+function optionalRowJson<T>(row: DatabaseRow, key: string): T | undefined {
+  const value = row[key];
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "string") return JSON.parse(value) as T;
+  return value as T;
+}
+
+function versionStatus(value: unknown): AppVersion["status"] {
+  if (value === "draft" || value === "published") return value;
+  throw new Error("PostgreSQL returned an invalid app version status");
+}
+
+function runStatus(value: unknown): WorkflowRun["status"] {
+  if (value === "queued" || value === "running" || value === "completed" || value === "failed") return value;
+  throw new Error("PostgreSQL returned an invalid workflow run status");
+}
+
+function mapVersion(value: unknown, prefix = ""): AppVersion {
+  const row = asRow(value);
   return {
-    id: row.id,
-    workflowId: row.workflow_id,
-    schema: jsonValue<UiSchema>(row.schema),
-    prompt: row.prompt,
-    createdAt: iso(row.created_at),
-    status: row.status,
+    id: rowString(row, `${prefix}id`),
+    workflowId: rowString(row, `${prefix}workflow_id`),
+    schema: rowJson<UiSchema>(row, `${prefix}schema`),
+    prompt: rowString(row, `${prefix}prompt`),
+    createdAt: rowDate(row, `${prefix}created_at`),
+    status: versionStatus(row[`${prefix}status`]),
   };
 }
 
-function mapPublishedApp(row: PublishedAppRow): PublishedApp {
+function mapPublishedApp(value: unknown, prefix = ""): PublishedApp {
+  const row = asRow(value);
   return {
-    slug: row.slug,
-    workflowId: row.workflow_id,
-    versionId: row.version_id,
-    publishedAt: iso(row.published_at),
+    slug: rowString(row, `${prefix}slug`),
+    workflowId: rowString(row, `${prefix}workflow_id`),
+    versionId: rowString(row, `${prefix}version_id`),
+    publishedAt: rowDate(row, `${prefix}published_at`),
   };
 }
 
-function mapRun(row: RunRow): WorkflowRun {
+function mapRun(value: unknown): WorkflowRun {
+  const row = asRow(value);
   const run: WorkflowRun = {
-    id: row.id,
-    workflowId: row.workflow_id,
-    status: row.status,
-    createdAt: iso(row.created_at),
-    updatedAt: iso(row.updated_at),
-    inputs: jsonValue<WorkflowInputValues>(row.inputs),
+    id: rowString(row, "id"),
+    workflowId: rowString(row, "workflow_id"),
+    status: runStatus(row.status),
+    createdAt: rowDate(row, "created_at"),
+    updatedAt: rowDate(row, "updated_at"),
+    inputs: rowJson<WorkflowInputValues>(row, "inputs"),
   };
-  if (row.outputs !== null) run.outputs = jsonValue<WorkflowOutputValues>(row.outputs);
-  if (row.steps !== null) run.steps = jsonValue<WorkflowRunStep[]>(row.steps);
-  if (row.error !== null) run.error = row.error;
+
+  const outputs = optionalRowJson<WorkflowOutputValues>(row, "outputs");
+  const steps = optionalRowJson<WorkflowRunStep[]>(row, "steps");
+  if (outputs !== undefined) run.outputs = outputs;
+  if (steps !== undefined) run.steps = steps;
+  if (typeof row.error === "string") run.error = row.error;
   return run;
 }
 
@@ -97,56 +114,58 @@ export function createPostgresStore(
 
   let schemaReady: Promise<void> | undefined;
 
-  function ensureSchema(): Promise<void> {
-    schemaReady ??= (async () => {
-      await sql`
-        CREATE TABLE IF NOT EXISTS cherryflow_app_versions (
-          id uuid PRIMARY KEY,
-          workflow_id text NOT NULL,
-          schema jsonb NOT NULL,
-          prompt text NOT NULL,
-          created_at timestamptz NOT NULL,
-          status text NOT NULL CHECK (status IN ('draft', 'published'))
-        )
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS cherryflow_app_versions_workflow_created_idx
-        ON cherryflow_app_versions (workflow_id, created_at DESC)
-      `;
-      await sql`
-        CREATE TABLE IF NOT EXISTS cherryflow_published_apps (
-          slug text PRIMARY KEY,
-          workflow_id text NOT NULL,
-          version_id uuid NOT NULL REFERENCES cherryflow_app_versions(id) ON DELETE RESTRICT,
-          published_at timestamptz NOT NULL
-        )
-      `;
-      await sql`
-        CREATE TABLE IF NOT EXISTS cherryflow_workflow_runs (
-          id uuid PRIMARY KEY,
-          workflow_id text NOT NULL,
-          status text NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed')),
-          created_at timestamptz NOT NULL,
-          updated_at timestamptz NOT NULL,
-          inputs jsonb NOT NULL,
-          outputs jsonb,
-          steps jsonb,
-          error text
-        )
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS cherryflow_workflow_runs_workflow_created_idx
-        ON cherryflow_workflow_runs (workflow_id, created_at DESC)
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS cherryflow_workflow_runs_status_updated_idx
-        ON cherryflow_workflow_runs (status, updated_at)
-      `;
-    })().catch((error) => {
-      schemaReady = undefined;
-      throw error;
-    });
-    return schemaReady;
+  async function ensureSchema(): Promise<void> {
+    if (!schemaReady) {
+      schemaReady = (async () => {
+        await sql`
+          CREATE TABLE IF NOT EXISTS cherryflow_app_versions (
+            id uuid PRIMARY KEY,
+            workflow_id text NOT NULL,
+            schema jsonb NOT NULL,
+            prompt text NOT NULL,
+            created_at timestamptz NOT NULL,
+            status text NOT NULL CHECK (status IN ('draft', 'published'))
+          )
+        `;
+        await sql`
+          CREATE INDEX IF NOT EXISTS cherryflow_app_versions_workflow_created_idx
+          ON cherryflow_app_versions (workflow_id, created_at DESC)
+        `;
+        await sql`
+          CREATE TABLE IF NOT EXISTS cherryflow_published_apps (
+            slug text PRIMARY KEY,
+            workflow_id text NOT NULL,
+            version_id uuid NOT NULL REFERENCES cherryflow_app_versions(id) ON DELETE RESTRICT,
+            published_at timestamptz NOT NULL
+          )
+        `;
+        await sql`
+          CREATE TABLE IF NOT EXISTS cherryflow_workflow_runs (
+            id uuid PRIMARY KEY,
+            workflow_id text NOT NULL,
+            status text NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed')),
+            created_at timestamptz NOT NULL,
+            updated_at timestamptz NOT NULL,
+            inputs jsonb NOT NULL,
+            outputs jsonb,
+            steps jsonb,
+            error text
+          )
+        `;
+        await sql`
+          CREATE INDEX IF NOT EXISTS cherryflow_workflow_runs_workflow_created_idx
+          ON cherryflow_workflow_runs (workflow_id, created_at DESC)
+        `;
+        await sql`
+          CREATE INDEX IF NOT EXISTS cherryflow_workflow_runs_status_updated_idx
+          ON cherryflow_workflow_runs (status, updated_at)
+        `;
+      })().catch((error) => {
+        schemaReady = undefined;
+        throw error;
+      });
+    }
+    await schemaReady;
   }
 
   return {
@@ -178,18 +197,18 @@ export function createPostgresStore(
 
     async listVersions(workflowId): Promise<AppVersion[]> {
       await ensureSchema();
-      const rows = await sql<VersionRow[]>`
+      const rows = await sql`
         SELECT id, workflow_id, schema, prompt, created_at, status
         FROM cherryflow_app_versions
         WHERE workflow_id = ${workflowId}
         ORDER BY created_at DESC
       `;
-      return rows.map(mapVersion);
+      return [...rows].map(mapVersion);
     },
 
     async getVersion(versionId): Promise<AppVersion | undefined> {
       await ensureSchema();
-      const rows = await sql<VersionRow[]>`
+      const rows = await sql`
         SELECT id, workflow_id, schema, prompt, created_at, status
         FROM cherryflow_app_versions
         WHERE id = ${versionId}::uuid
@@ -244,18 +263,18 @@ export function createPostgresStore(
 
     async getPublishedApp(slug): Promise<{ app: PublishedApp; version: AppVersion } | undefined> {
       await ensureSchema();
-      const rows = await sql<Array<PublishedAppRow & VersionRow>>`
+      const rows = await sql`
         SELECT
-          app.slug,
-          app.workflow_id,
-          app.version_id,
-          app.published_at,
-          version.id,
+          app.slug AS app_slug,
+          app.workflow_id AS app_workflow_id,
+          app.version_id AS app_version_id,
+          app.published_at AS app_published_at,
+          version.id AS version_id,
           version.workflow_id AS version_workflow_id,
-          version.schema,
-          version.prompt,
-          version.created_at,
-          version.status
+          version.schema AS version_schema,
+          version.prompt AS version_prompt,
+          version.created_at AS version_created_at,
+          version.status AS version_status
         FROM cherryflow_published_apps app
         JOIN cherryflow_app_versions version ON version.id = app.version_id
         WHERE app.slug = ${sanitizeSlug(slug)}
@@ -264,15 +283,8 @@ export function createPostgresStore(
       const row = rows[0];
       if (!row) return undefined;
       return {
-        app: mapPublishedApp(row),
-        version: {
-          id: row.id,
-          workflowId: String((row as Record<string, unknown>).version_workflow_id),
-          schema: jsonValue<UiSchema>(row.schema),
-          prompt: row.prompt,
-          createdAt: iso(row.created_at),
-          status: row.status,
-        },
+        app: mapPublishedApp(row, "app_"),
+        version: mapVersion(row, "version_"),
       };
     },
 
@@ -307,7 +319,7 @@ export function createPostgresStore(
 
     async updateRun(runId, patch): Promise<WorkflowRun | undefined> {
       await ensureSchema();
-      const currentRows = await sql<RunRow[]>`
+      const currentRows = await sql`
         SELECT id, workflow_id, status, created_at, updated_at, inputs, outputs, steps, error
         FROM cherryflow_workflow_runs
         WHERE id = ${runId}::uuid
@@ -326,14 +338,14 @@ export function createPostgresStore(
         updatedAt: new Date().toISOString(),
       };
 
-      const rows = await sql<RunRow[]>`
+      const rows = await sql`
         UPDATE cherryflow_workflow_runs
         SET
           status = ${updated.status},
           updated_at = ${updated.updatedAt}::timestamptz,
           inputs = ${jsonParameter(updated.inputs)}::jsonb,
-          outputs = ${updated.outputs === undefined ? null : jsonParameter(updated.outputs)}::jsonb,
-          steps = ${updated.steps === undefined ? null : jsonParameter(updated.steps)}::jsonb,
+          outputs = ${jsonParameter(updated.outputs)}::jsonb,
+          steps = ${jsonParameter(updated.steps)}::jsonb,
           error = ${updated.error ?? null}
         WHERE id = ${runId}::uuid
         RETURNING id, workflow_id, status, created_at, updated_at, inputs, outputs, steps, error
@@ -344,7 +356,7 @@ export function createPostgresStore(
 
     async getRun(runId): Promise<WorkflowRun | undefined> {
       await ensureSchema();
-      const rows = await sql<RunRow[]>`
+      const rows = await sql`
         SELECT id, workflow_id, status, created_at, updated_at, inputs, outputs, steps, error
         FROM cherryflow_workflow_runs
         WHERE id = ${runId}::uuid
