@@ -100,7 +100,9 @@ function mapRun(value: unknown): WorkflowRun {
 }
 
 function jsonParameter(value: unknown): string {
-  return JSON.stringify(value ?? null);
+  const serialized = JSON.stringify(value ?? null);
+  if (serialized === undefined) throw new Error("Value cannot be serialized as JSON");
+  return serialized;
 }
 
 export function createPostgresStore(
