@@ -10,7 +10,6 @@ Move CherryFlow from a local MVP to a durable production-ready runtime where dat
 
 ### Scope
 
-- Merge PR #4 into `main`
 - Add PostgreSQL schema and migrations
 - Move workflows, versions, published apps, and runs from JSON storage to PostgreSQL
 - Add Redis/BullMQ workers
@@ -56,7 +55,7 @@ Allow users to build workflows without editing source code.
   - Excel/CSV Reader
   - PDF Text Extract
   - LLM Prompt
-  - AI Agent/OpenClaw
+  - AI Agent/OpenClaw (executable module available; visual configuration remains)
   - PostgreSQL/MySQL Query
   - Generate PDF/DOCX
   - Email
@@ -180,9 +179,12 @@ Phase 4: Make the platform scalable and extensible
 
 ## Current status
 
-- CherryFlow v0.3 workflow graph engine: Draft PR #4
-- AI workflow website generation: Draft PR #4
-- Phase 1: Not started
-- Phase 2: Not started
-- Phase 3: Not started
-- Phase 4: Not started
+- CherryFlow v0.3 workflow graph engine and generated workflow websites: merged in PR #4
+- Local-first Qwen product positioning and architecture documentation: merged in PR #5
+- Local deterministic, OpenAI-compatible, and OpenClaw provider modes: available
+- Explicit OpenClaw bridge client: available
+- Executable `agent.openclaw` workflow module with approval-reference guard: available
+- Phase 1 durable persistence and distributed workers: not started
+- Phase 2 visual workflow canvas and remaining core modules: not started
+- Phase 3 SaaS and tenant security: not started
+- Phase 4 enterprise scale and ecosystem: not started
