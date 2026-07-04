@@ -13,7 +13,8 @@
   "dependencies": {
     "@cherryflow/openclaw-adapter": "workspace:0.2.0",
     "@cherryflow/ui-schema": "workspace:0.3.0",
-    "@cherryflow/workflow-engine": "workspace:0.3.0"
+    "@cherryflow/workflow-engine": "workspace:0.3.0",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
