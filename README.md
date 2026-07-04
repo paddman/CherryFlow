@@ -1,42 +1,34 @@
 # CherryFlow
 
-CherryFlow is an AI-first workflow and app builder. Describe the app you need, let an AI planner produce a safe UI Schema, preview the working form, run the workflow, save versions, and publish the result as a public URL.
+CherryFlow is an AI-first workflow and website builder. It creates a validated website from a workflow contract, publishes the result, and runs the workflow through a module graph.
 
-## What works now
+## Available now
 
-- Prompt-to-UI generation with three provider modes: `local`, `openai`, and `openclaw`
-- Safe allowlisted UI Schema instead of arbitrary generated JavaScript
-- Live React preview with form controls and file upload
-- Workflow execution with queued/running/completed/failed states
-- Polling and rendered text, table, and downloadable file outputs
-- Save draft versions, publish by slug, list versions, and rollback
-- Public runtime route at `/apps/{slug}`
-- JSON-file persistence for the runnable MVP
-- Node.js 24+, TypeScript, Next.js App Router, and a dependency-light Node API
+- Generate a website from Thai or English prompts
+- Local, OpenAI-compatible, and OpenClaw planner modes
+- Navbar, hero, statistics, feature cards, steps, FAQ, form, progress, results, callout, and footer sections
+- Live preview, prompt refinement, draft versions, publishing, and rollback
+- Public pages at `/apps/{slug}`
+- Workflow graph validation and ordered module execution
+- Per-node run events and final workflow outputs
+- Local JSON persistence for the MVP
 
-## Architecture
+## Runtime
 
 ```text
 Prompt + Workflow Contract
           ↓
-AI Planner (local / OpenAI-compatible / OpenClaw bridge)
+Validated UI Schema
           ↓
-Normalize + Validate UI Schema
+Preview → Save → Publish Website
           ↓
-React Live Preview
-          ↓
-Save Version → Publish Slug → Public App
-          ↓
-Submit Form → Workflow Run → Poll Status → Render Output
+Form → Workflow Graph → Modules → Output
 ```
-
-CherryFlow owns workflow state, schema validation, permissions, versioning, publishing, and audit-ready run records. AI providers only propose UI Schema.
 
 ## Requirements
 
 - Node.js 24+
 - pnpm 10+
-- Docker Compose only when using the optional PostgreSQL, Redis, or MinIO services
 
 ## Start
 
@@ -52,11 +44,11 @@ Open:
 
 - Builder: `http://localhost:3000`
 - API health: `http://localhost:4000/health`
-- Published app example after publishing: `http://localhost:3000/apps/{slug}`
+- Published website: `http://localhost:3000/apps/{slug}`
 
-The default `CHERRYFLOW_AI_PROVIDER=local` requires no model and still creates varied, validated pages from Thai or English prompts.
+The default provider is `local`. Add `website`, `landing`, `เว็บไซต์`, or `หน้าเว็บ` to the prompt to generate the full website template.
 
-## Connect a local model
+## Local model
 
 ```env
 CHERRYFLOW_AI_PROVIDER=openai
@@ -65,11 +57,13 @@ OPENAI_API_KEY=local
 OPENAI_MODEL=qwen3.5-35b-a3b
 ```
 
-## Main endpoints
+## API
 
 ```text
+GET  /api/modules
 GET  /api/workflows
 GET  /api/workflows/:workflowId
+GET  /api/workflows/:workflowId/graph
 POST /api/workflows/:workflowId/ui/generate
 POST /api/workflows/:workflowId/ui/refine
 POST /api/workflows/:workflowId/ui/validate
@@ -83,8 +77,11 @@ GET  /api/apps/:slug
 POST /api/apps/:slug/run
 ```
 
-## Scope
+## Built-in modules
 
-This is a complete runnable MVP for auto-generating and publishing workflow frontends. Production multi-tenancy, SSO/RBAC, distributed queues, object storage, database migrations, rate limiting, and isolated agent sandboxes remain deployment hardening work.
+- `core.input`
+- `file.inspect`
+- `report.compose`
+- `core.output`
 
-See `docs/architecture.md` and `docs/ai-providers.md`.
+This repository is a runnable MVP. Production deployment still needs PostgreSQL migrations, distributed workers, object storage, authentication, RBAC, quotas, rate limits, and secret management.

@@ -1,6 +1,6 @@
 {
   "name": "@cherryflow/web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cherryflow/ui-schema": "workspace:0.2.0",
+    "@cherryflow/ui-schema": "workspace:0.3.0",
     "next": "^16.2.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

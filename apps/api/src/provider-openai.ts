@@ -1,15 +1,20 @@
 import type { WorkflowContract } from "@cherryflow/ui-schema";
 
+const schemaRules = `Return one JSON object only. Build a CherryFlow UI Schema with version, workflowId, meta, theme, and page. Allowed component types: navbar, hero, text, notice, stats, feature-grid, steps, faq, cta, footer, divider, workflow-form, job-progress, workflow-output. Use exactly one workflow-form and one workflow-output. Use at most one job-progress, navbar, and footer. Bind form fields and outputs only to names declared in the workflow contract. Navbar targets must be local anchors beginning with #. Do not return HTML, JavaScript, scripts, or remote resources.`;
+
 export async function requestOpenAiSchema(prompt: string, workflow: WorkflowContract): Promise<unknown> {
   const base = (process.env.OPENAI_BASE_URL ?? "http://localhost:8000/v1").replace(/\/$/, "");
   const response = await fetch(`${base}/chat/completions`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(process.env.OPENAI_API_KEY ? { authorization: `Bearer ${process.env.OPENAI_API_KEY}` } : {}),
+    },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL ?? "qwen3.5-35b-a3b",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: `Return UI Schema JSON for ${JSON.stringify(workflow)}` },
+        { role: "system", content: `${schemaRules}\nWorkflow contract: ${JSON.stringify(workflow)}` },
         { role: "user", content: prompt.slice(0, 2000) },
       ],
     }),

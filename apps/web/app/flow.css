@@ -1,0 +1,3 @@
+.flowPanel { max-width: 1000px; margin: 0 auto; padding: 24px; background: white; border-radius: 20px; }
+.flowGrid { display: grid; gap: 12px; margin-top: 24px; }
+.flowGrid article { padding: 15px; border: 1px solid #dce5f2; border-radius: 14px; }
