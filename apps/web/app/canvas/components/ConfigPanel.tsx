@@ -1,10 +1,20 @@
 'use client';
 
-import { Node } from 'reactflow';
+import type { Node } from '@xyflow/react';
+
+type WorkflowNodeData = {
+  label: string;
+  config?: string;
+};
+
+type WorkflowNode = Node<WorkflowNodeData>;
 
 interface ConfigPanelProps {
-  selectedNode: Node | null;
-  onUpdateNode: (nodeId: string, data: any) => void;
+  selectedNode: WorkflowNode | null;
+  onUpdateNode: (
+    nodeId: string,
+    data: Partial<WorkflowNodeData>
+  ) => void;
 }
 
 export function ConfigPanel({ selectedNode, onUpdateNode }: ConfigPanelProps) {
@@ -18,22 +28,34 @@ export function ConfigPanel({ selectedNode, onUpdateNode }: ConfigPanelProps) {
 
   return (
     <div className="w-80 border-l bg-white p-4">
-      <h3 className="font-semibold mb-4">Node Configuration</h3>
+      <h3 className="mb-4 font-semibold">Node Configuration</h3>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm mb-1">Label</label>
+          <label className="mb-1 block text-sm" htmlFor="node-label">
+            Label
+          </label>
           <input
+            id="node-label"
             type="text"
-            value={selectedNode.data.label || ''}
-            onChange={(e) => onUpdateNode(selectedNode.id, { label: e.target.value })}
-            className="w-full border rounded px-3 py-2"
+            value={selectedNode.data.label}
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, { label: event.target.value })
+            }
+            className="w-full rounded border px-3 py-2"
           />
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Prompt / Config</label>
+          <label className="mb-1 block text-sm" htmlFor="node-config">
+            Prompt / Config
+          </label>
           <textarea
-            className="w-full border rounded px-3 py-2 h-32"
+            id="node-config"
+            value={selectedNode.data.config ?? ''}
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, { config: event.target.value })
+            }
+            className="h-32 w-full rounded border px-3 py-2"
             placeholder="Enter prompt or configuration..."
           />
         </div>
