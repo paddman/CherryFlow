@@ -7,6 +7,7 @@ import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
 
 const port = Number(process.env.CHERRYFLOW_API_PORT ?? 4000);
+const host = process.env.CHERRYFLOW_API_HOST ?? "127.0.0.1";
 
 createServer(async (request, response) => {
   if (applyCors(request, response)) return;
@@ -29,4 +30,4 @@ createServer(async (request, response) => {
   } catch (error) {
     send(response, 500, { error: error instanceof Error ? error.message : "Unexpected error" });
   }
-}).listen(port);
+}).listen(port, host);
