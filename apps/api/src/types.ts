@@ -24,6 +24,8 @@ export interface StoreData {
   canvases: CanvasFlow[];
   authUsers: AuthUser[];
   authSessions: AuthSession[];
+  models: ModelRegistryEntry[];
+  workerPools: WorkerPool[];
 }
 
 export interface WorkflowDefinition {
@@ -69,4 +71,26 @@ export interface AuthSession {
   tokenHash: string;
   expiresAt: string;
   createdAt: string;
+}
+
+export interface ModelRegistryEntry {
+  id: string;
+  provider: "openai" | "local" | "openclaw" | "custom";
+  displayName: string;
+  endpoint?: string;
+  capabilities: string[];
+  status: "available" | "unavailable";
+  contextWindow?: number;
+  updatedAt: string;
+}
+
+export interface WorkerPool {
+  id: string;
+  type: "ml" | "dl" | "agent" | "custom";
+  label: string;
+  endpoint?: string;
+  status: "online" | "degraded" | "offline";
+  models: string[];
+  concurrency: number;
+  updatedAt: string;
 }

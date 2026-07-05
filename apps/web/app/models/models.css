@@ -1,0 +1,141 @@
+.modelsPage {
+  min-height: 100vh;
+  background: #edf4ff;
+  padding: 44px;
+  color: #12213a;
+}
+
+.modelsHero {
+  width: min(1040px, 100%);
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #ffffff, #f5f9ff);
+  border: 1px solid #dbe7f8;
+  border-radius: 28px;
+  padding: clamp(24px, 5vw, 46px);
+  box-shadow: 0 24px 80px rgba(32, 72, 126, .14);
+}
+
+.modelsHero h1 {
+  margin: 0 0 12px;
+  font-size: clamp(34px, 6vw, 68px);
+  line-height: .96;
+  letter-spacing: -.05em;
+}
+
+.modelsHero p {
+  max-width: 720px;
+  color: #5d6f86;
+  line-height: 1.7;
+}
+
+.modelsNotice {
+  margin-top: 12px;
+  color: #1769e0;
+  font-weight: 800;
+}
+
+.modelsGrid,
+.registrySection {
+  width: min(1040px, 100%);
+  margin: 0 auto 24px;
+}
+
+.modelsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.modelsCard,
+.registrySection {
+  background: rgba(255,255,255,.92);
+  border: 1px solid #dbe7f8;
+  border-radius: 22px;
+  padding: 20px;
+}
+
+.modelsNumber {
+  display: block;
+  font-size: 38px;
+  font-weight: 950;
+  color: #1769e0;
+}
+
+.modelsCard p,
+.registryRow p,
+.modelRow p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.registryList,
+.modelTable {
+  display: grid;
+  gap: 12px;
+}
+
+.registryRow,
+.modelRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid #e0e8f5;
+  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+}
+
+.modelRow {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto) auto;
+}
+
+.registryRow code {
+  display: block;
+  color: #1769e0;
+  margin-top: 4px;
+}
+
+.capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.capabilities span,
+.poolStatus,
+.modelStatus {
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #edf4ff;
+  color: #1769e0;
+}
+
+.poolStatus.online,
+.modelStatus.available {
+  background: #dcf7e8;
+  color: #17643b;
+}
+
+.poolStatus.degraded {
+  background: #fff3d6;
+  color: #8a5d00;
+}
+
+.poolStatus.offline,
+.modelStatus.unavailable {
+  background: #ffe4e4;
+  color: #982727;
+}
+
+@media (max-width: 780px) {
+  .modelsPage { padding: 18px; }
+  .modelsGrid,
+  .modelRow {
+    grid-template-columns: 1fr;
+  }
+  .capabilities { justify-content: flex-start; }
+}
