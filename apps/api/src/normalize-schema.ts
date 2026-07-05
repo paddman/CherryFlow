@@ -1,5 +1,41 @@
 import { createDefaultTheme, validateUiSchema, type UiComponent, type UiSchema, type WorkflowContract } from "@cherryflow/ui-schema";
 
+const THEME_ALIASES: Record<string, keyof ReturnType<typeof createDefaultTheme>> = {
+  primary: "primaryColor",
+  background: "backgroundColor",
+  text: "textColor",
+  surface: "surfaceColor",
+  card: "surfaceColor",
+};
+
+// Smaller local models frequently ignore the "flat object" instruction and wrap fields in
+// a nested props object, or return page as a bare array instead of { components: [...] }.
+// Coerce those shapes back before validation instead of silently dropping everything the
+// model proposed down to the bare default skeleton.
+function coerceRawSchema(value: Record<string, unknown>): Record<string, unknown> {
+  const rawPage = value.page;
+  const rawComponents = Array.isArray(rawPage) ? rawPage : (rawPage as { components?: unknown } | undefined)?.components;
+  const components = Array.isArray(rawComponents)
+    ? rawComponents.map((entry) => {
+        if (!entry || typeof entry !== "object") return entry;
+        const component = entry as Record<string, unknown>;
+        const props = component.props && typeof component.props === "object" ? (component.props as Record<string, unknown>) : {};
+        const { props: _props, ...rest } = component;
+        return { ...props, ...rest, type: component.type ?? component.component };
+      })
+    : [];
+
+  const page = Array.isArray(rawPage) ? {} : (rawPage as Record<string, unknown> | undefined) ?? {};
+
+  const rawTheme = (value.theme as Record<string, unknown> | undefined) ?? {};
+  const theme: Record<string, unknown> = { ...rawTheme };
+  for (const [alias, canonical] of Object.entries(THEME_ALIASES)) {
+    if (theme[canonical] === undefined && rawTheme[alias] !== undefined) theme[canonical] = rawTheme[alias];
+  }
+
+  return { ...value, theme, page: { ...page, components } };
+}
+
 function repairComponents(components: UiComponent[], workflow: WorkflowContract): UiComponent[] {
   const repaired: UiComponent[] = [];
   const seenSingletons = new Set<string>();
@@ -69,9 +105,9 @@ function repairComponents(components: UiComponent[], workflow: WorkflowContract)
   return repaired;
 }
 
-export function normalizeSchema(value: unknown, workflow: WorkflowContract, prompt: string): UiSchema {
-  if (!value || typeof value !== "object") throw new Error("Provider output is not an object");
-  const schema = value as UiSchema;
+export function normalizeSchema(rawValue: unknown, workflow: WorkflowContract, prompt: string): UiSchema {
+  if (!rawValue || typeof rawValue !== "object") throw new Error("Provider output is not an object");
+  const schema = coerceRawSchema(rawValue as Record<string, unknown>) as unknown as UiSchema;
   schema.version = "1.0";
   schema.workflowId = workflow.id;
   schema.theme = { ...createDefaultTheme(), ...(schema.theme ?? {}) };

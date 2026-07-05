@@ -14,7 +14,7 @@ export interface WorkflowInput {
 export interface WorkflowOutput {
   name: string;
   label: string;
-  type: "text" | "markdown" | "table" | "image" | "file";
+  type: "text" | "markdown" | "table" | "image" | "file" | "report";
 }
 
 export interface WorkflowContract {
@@ -70,7 +70,43 @@ export type WorkflowInputValue = string | number | boolean | UploadedFileValue |
 export type WorkflowInputValues = Record<string, WorkflowInputValue>;
 
 export interface FileOutputValue { name: string; mimeType: string; dataUrl?: string; url?: string; objectKey?: string }
-export type WorkflowOutputValue = string | number | boolean | Array<Record<string, string | number | boolean>> | FileOutputValue | null;
+export interface ReportPreviewValue {
+  kind: "report";
+  title: string;
+  subtitle: string;
+  department: string;
+  audience: string;
+  fileName: string;
+  generatedAt: string;
+  outputFormat: string;
+  template: string;
+  theme: {
+    name: string;
+    accentColor: string;
+    accentDark: string;
+    surfaceColor: string;
+    backgroundColor: string;
+  };
+  aiStatus: string;
+  summaryMarkdown: string;
+  tableOfContents: Array<{ id: string; title: string; kind: string }>;
+  flow?: {
+    title: string;
+    description: string;
+    nodes: Array<{ id: string; label: string; detail: string; status: string; kind: string }>;
+    edges: Array<{ from: string; to: string; label?: string }>;
+  };
+  kpis: Array<{ label: string; value: string; detail: string; tone: string }>;
+  metrics: Array<Record<string, string | number | boolean>>;
+  charts: Array<{ id: string; title: string; type: string; unit?: string; insight: string; data: Array<{ label: string; value: number }> }>;
+  sections: Array<{ id: string; title: string; body: string; bullets: string[] }>;
+  tables: Array<{ title: string; columns: string[]; rows: Array<Record<string, string | number | boolean>> }>;
+  risks: Array<{ title: string; level: string; mitigation: string }>;
+  recommendations: Array<{ title: string; detail: string; priority: string }>;
+  notes?: string;
+  appendix: { sourcePreview: string; truncated: boolean; dataShape: string };
+}
+export type WorkflowOutputValue = string | number | boolean | Array<Record<string, string | number | boolean>> | FileOutputValue | ReportPreviewValue | null;
 export type WorkflowOutputValues = Record<string, WorkflowOutputValue>;
 
 export interface WorkflowRunStep {

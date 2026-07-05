@@ -7,6 +7,21 @@ import { RuntimeField } from "./RuntimeField";
 import { RuntimeOutput } from "./RuntimeOutput";
 import { StaticSection } from "./StaticSection";
 
+function fieldsForComponent(componentFields: string[], workflow: WorkflowContract): string[] {
+  const existing = new Set(componentFields);
+  const missing = workflow.inputs.map((field) => field.name).filter((name) => !existing.has(name));
+  return [...componentFields, ...missing];
+}
+
+function bindingsForComponent(componentBindings: string[], workflow: WorkflowContract): string[] {
+  const existing = new Set(componentBindings);
+  const missing = workflow.outputs.map((output) => output.name).filter((name) => !existing.has(name));
+  const ordered = [...componentBindings, ...missing];
+  return ordered.includes("reportPreview")
+    ? ["reportPreview", ...ordered.filter((name) => name !== "reportPreview")]
+    : ordered;
+}
+
 async function fileValue(file: File): Promise<UploadedFileValue> {
   if (file.size > 5 * 1024 * 1024) throw new Error("ไฟล์ต้องมีขนาดไม่เกิน 5 MB");
   const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -16,6 +31,45 @@ async function fileValue(file: File): Promise<UploadedFileValue> {
     reader.readAsDataURL(file);
   });
   return { name: file.name, type: file.type, size: file.size, dataUrl };
+}
+
+function formatStepTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function RunFlow({ run }: { run: WorkflowRun }) {
+  const steps = run.steps ?? [];
+  return (
+    <div className="runFlow">
+      <div className="runFlowHeader">
+        <div>
+          <span>CherryFlow execution</span>
+          <strong>Workflow run flow</strong>
+          <small>Run ID: {run.id}</small>
+        </div>
+        <em className={`status status-${run.status}`}>{run.status}</em>
+      </div>
+      {steps.length > 0 ? (
+        <ol className="runFlowTrack">
+          {steps.map((step, index) => (
+            <li className={`runFlowStep step-${step.status}`} key={`${step.nodeId}-${step.status}-${index}`}>
+              <span className="runFlowIndex">{index + 1}</span>
+              <div>
+                <strong>{step.nodeId}</strong>
+                <small>{step.moduleType}</small>
+                {step.error && <p>{step.error}</p>}
+              </div>
+              <em>{step.status}</em>
+              <time>{formatStepTime(step.at)}</time>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="muted">รอ step events จาก workflow engine...</p>
+      )}
+    </div>
+  );
 }
 
 export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }: {
@@ -28,6 +82,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const hasProgressComponent = useMemo(() => schema.page.components.some((component) => component.type === "job-progress"), [schema.page.components]);
 
   const style = useMemo(() => ({
     "--cf-primary": schema.theme.primaryColor,
@@ -75,7 +130,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
             <section id={component.id} className="contentCard formCard" key={component.id}>
               {component.title && <h2>{component.title}</h2>}
               {component.description && <p className="muted">{component.description}</p>}
-              <div className="formGrid">{component.fields.map((name) => {
+              <div className="formGrid">{fieldsForComponent(component.fields, workflow).map((name) => {
                 const field = workflow.inputs.find((item) => item.name === name);
                 return field ? <RuntimeField key={name} field={field} value={values[name]} onChange={(value) => setValues((current) => ({ ...current, [name]: value }))} /> : null;
               })}</div>
@@ -86,19 +141,19 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
 
           if (component.type === "job-progress") return (
             <section id={component.id} className="contentCard progressCard" key={component.id}>
-              <div>
+              <div className="progressCardHeader">
                 <h2>{component.title ?? "สถานะ"}</h2>
-                <p>{run ? `Run ID: ${run.id}` : "ยังไม่ได้เริ่ม"}</p>
-                {run?.steps && run.steps.length > 0 && <ul className="nodeSteps">{run.steps.map((step, index) => <li key={`${step.nodeId}-${step.status}-${index}`}><span>{step.nodeId}</span><small>{step.moduleType}</small><strong className={`step-${step.status}`}>{step.status}</strong></li>)}</ul>}
+                {!run && <p>ยังไม่ได้เริ่ม</p>}
               </div>
-              <span className={`status status-${run?.status ?? "idle"}`}>{run?.status ?? "idle"}</span>
+              {run ? <RunFlow run={run} /> : <span className="status status-idle">idle</span>}
             </section>
           );
 
           if (component.type === "workflow-output") return (
             <section id={component.id} className="contentCard outputCard" key={component.id}><h2>{component.title ?? "ผลลัพธ์"}</h2>
               {!run?.outputs && <p className="muted">{component.emptyText ?? "ยังไม่มีผลลัพธ์"}</p>}
-              {component.bindings.map((binding) => { const output = workflow.outputs.find((item) => item.name === binding); return output && run?.outputs ? <article className="outputBlock" key={binding}><h3>{output.label}</h3><RuntimeOutput value={run.outputs[binding]} /></article> : null; })}
+              {run && !hasProgressComponent && <RunFlow run={run} />}
+              {bindingsForComponent(component.bindings, workflow).map((binding) => { const output = workflow.outputs.find((item) => item.name === binding); return output && run?.outputs ? <article className={`outputBlock output-${binding}`} key={binding}><h3>{output.label}</h3><RuntimeOutput value={run.outputs[binding]} /></article> : null; })}
               {run?.status === "failed" && <p className="errorMessage">{run.error}</p>}
             </section>
           );

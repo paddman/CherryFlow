@@ -6,6 +6,11 @@ import { startRun } from "./run-service.js";
 import { getPublishedApp, getRun } from "./store.js";
 import { getWorkflow } from "./workflows.js";
 
+function contentDispositionAttachment(fileName: string): string {
+  const asciiName = fileName.replace(/[^\x20-\x7E]+/g, "_").replace(/["\\]/g, "").trim() || "download";
+  return `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
 export async function handleRuntimeRoutes(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
   const fileMatch = pathname.match(/^\/api\/files\/(.+)$/);
   if (request.method === "GET" && fileMatch) {
@@ -14,7 +19,7 @@ export async function handleRuntimeRoutes(request: IncomingMessage, response: Se
     else {
       response.writeHead(200, {
         "content-type": file.contentType,
-        "content-disposition": `attachment; filename="${file.name.replace(/"/g, "")}"`,
+        "content-disposition": contentDispositionAttachment(file.name),
       });
       response.end(file.body);
     }
