@@ -1,18 +1,15 @@
 import { ModuleRegistry, type WorkflowData } from "@cherryflow/workflow-engine";
 import type { FileOutputValue, UploadedFileValue } from "@cherryflow/ui-schema";
 import { createCherryAgentModuleDefinition } from "./cherry-agent.js";
+import { createFileOutput } from "./file-storage.js";
 import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 
 function isUploadedFile(value: unknown): value is UploadedFileValue {
-  return Boolean(value && typeof value === "object" && "name" in value && "dataUrl" in value && "size" in value);
+  return Boolean(value && typeof value === "object" && "name" in value && ("dataUrl" in value || "objectKey" in value) && "size" in value);
 }
 
-function textDownload(name: string, text: string): FileOutputValue {
-  return {
-    name,
-    mimeType: "text/plain;charset=utf-8",
-    dataUrl: `data:text/plain;charset=utf-8;base64,${Buffer.from(text, "utf8").toString("base64")}`,
-  };
+function textDownload(name: string, text: string): Promise<FileOutputValue> {
+  return createFileOutput(name, "text/plain;charset=utf-8", text);
 }
 
 function dependency(dependencies: Record<string, WorkflowData>, nodeId: string): WorkflowData {
@@ -85,7 +82,7 @@ export const moduleRegistry = new ModuleRegistry()
           { metric: "Source file", value: fileName },
           { metric: "File size (KB)", value: Number((fileSize / 1024).toFixed(1)) },
         ],
-        reportFile: textDownload(`${projectName.replace(/\s+/g, "-").toLowerCase()}-report.txt`, reportText),
+        reportFile: await textDownload(`${projectName.replace(/\s+/g, "-").toLowerCase()}-report.txt`, reportText),
       };
     },
   })

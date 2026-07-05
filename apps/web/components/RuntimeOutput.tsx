@@ -3,12 +3,12 @@
 import type { FileOutputValue, WorkflowOutputValue } from "@cherryflow/ui-schema";
 
 function isFile(value: WorkflowOutputValue): value is FileOutputValue {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value) && "dataUrl" in value);
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && ("dataUrl" in value || "url" in value));
 }
 
 export function RuntimeOutput({ value }: { value: WorkflowOutputValue | undefined }) {
   if (value == null) return <span className="muted">ไม่มีข้อมูล</span>;
-  if (isFile(value)) return <a className="downloadButton" href={value.dataUrl} download={value.name}>ดาวน์โหลด {value.name}</a>;
+  if (isFile(value)) return <a className="downloadButton" href={value.url ?? value.dataUrl} download={value.name}>ดาวน์โหลด {value.name}</a>;
   if (Array.isArray(value)) {
     const columns = value[0] ? Object.keys(value[0]) : [];
     return (

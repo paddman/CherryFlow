@@ -65,11 +65,11 @@ export interface UiSchema {
   };
 }
 
-export interface UploadedFileValue { name: string; type: string; size: number; dataUrl: string }
+export interface UploadedFileValue { name: string; type: string; size: number; dataUrl?: string; url?: string; objectKey?: string }
 export type WorkflowInputValue = string | number | boolean | UploadedFileValue | null;
 export type WorkflowInputValues = Record<string, WorkflowInputValue>;
 
-export interface FileOutputValue { name: string; mimeType: string; dataUrl: string }
+export interface FileOutputValue { name: string; mimeType: string; dataUrl?: string; url?: string; objectKey?: string }
 export type WorkflowOutputValue = string | number | boolean | Array<Record<string, string | number | boolean>> | FileOutputValue | null;
 export type WorkflowOutputValues = Record<string, WorkflowOutputValue>;
 

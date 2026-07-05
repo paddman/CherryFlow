@@ -1,10 +1,13 @@
 import { createServer } from "node:http";
 import { applyCors } from "./cors.js";
+import { fileStorageEnabled } from "./file-storage.js";
 import { send } from "./http-utils.js";
+import { redisQueueEnabled } from "./redis-queue.js";
 import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
+import { startRunWorker } from "./run-service.js";
 
 const port = Number(process.env.CHERRYFLOW_API_PORT ?? 4000);
 const host = process.env.CHERRYFLOW_API_HOST ?? "127.0.0.1";
@@ -19,6 +22,9 @@ createServer(async (request, response) => {
         status: "ok",
         service: "cherryflow-api",
         aiProvider: process.env.CHERRYFLOW_AI_PROVIDER ?? "local",
+        store: (process.env.CHERRYFLOW_STORE ?? (process.env.DATABASE_URL ? "postgres" : "json")),
+        runner: redisQueueEnabled() ? "redis" : "in_process",
+        fileStorage: fileStorageEnabled() ? "s3" : "inline",
       });
       return;
     }
@@ -30,4 +36,4 @@ createServer(async (request, response) => {
   } catch (error) {
     send(response, 500, { error: error instanceof Error ? error.message : "Unexpected error" });
   }
-}).listen(port, host);
+}).listen(port, host, () => startRunWorker());

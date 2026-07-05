@@ -11,12 +11,16 @@
     "build": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1079.0",
     "@cherryflow/openclaw-adapter": "workspace:0.2.0",
     "@cherryflow/ui-schema": "workspace:0.3.0",
-    "@cherryflow/workflow-engine": "workspace:0.3.0"
+    "@cherryflow/workflow-engine": "workspace:0.3.0",
+    "pg": "^8.22.0",
+    "redis": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.20.0",
     "typescript": "^5.8.3"
   }
