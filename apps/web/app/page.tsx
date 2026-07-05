@@ -31,6 +31,7 @@ export default function HomePage() {
             <a href="#use-cases">Use Cases</a>
             <a href="#architecture">Architecture</a>
             <Link className={styles.navButton} href="/builder" prefetch={false}>เปิด Builder</Link>
+            <Link className={styles.navButton} href="/models" prefetch={false}>Models</Link>
           </div>
         </nav>
       </header>
@@ -118,7 +119,7 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><a href="#features">AI Stack</a></div></div>
+        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><Link href="/models" prefetch={false}>Models</Link><a href="#features">AI Stack</a></div></div>
       </footer>
     </main>
   );

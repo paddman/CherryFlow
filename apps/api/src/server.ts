@@ -3,6 +3,7 @@ import { authorizeManagementRequest, handleAuthRoutes } from "./auth.js";
 import { applyCors } from "./cors.js";
 import { fileStorageEnabled } from "./file-storage.js";
 import { send } from "./http-utils.js";
+import { handleModelRegistryRoutes } from "./model-registry.js";
 import { redisQueueEnabled } from "./redis-queue.js";
 import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
@@ -31,6 +32,7 @@ createServer(async (request, response) => {
     }
     if (await handleAuthRoutes(request, response, url.pathname)) return;
     if (!await authorizeManagementRequest(request, response, url.pathname)) return;
+    if (await handleModelRegistryRoutes(request, response, url.pathname)) return;
     if (await handleAgentRoutes(request, response, url.pathname)) return;
     if (await handleBuilderRoutes(request, response, url.pathname)) return;
     if (await handlePublishRoutes(request, response, url.pathname)) return;

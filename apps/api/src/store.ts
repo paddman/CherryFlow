@@ -3,10 +3,10 @@ import { dirname, resolve } from "node:path";
 import { Pool } from "pg";
 import type { UiSchema, WorkflowInputValues, WorkflowRun } from "@cherryflow/ui-schema";
 import { sanitizeSlug } from "@cherryflow/ui-schema";
-import type { AppVersion, AuthSession, AuthUser, CanvasFlow, PublishedApp, StoreData } from "./types.js";
+import type { AppVersion, AuthSession, AuthUser, CanvasFlow, ModelRegistryEntry, PublishedApp, StoreData, WorkerPool } from "./types.js";
 
 const dataFile = resolve(process.env.CHERRYFLOW_DATA_FILE ?? "./data/cherryflow.json");
-const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [], authUsers: [], authSessions: [] };
+const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [], authUsers: [], authSessions: [], models: [], workerPools: [] };
 let writeQueue = Promise.resolve();
 let pool: Pool | undefined;
 let postgresReady: Promise<void> | undefined;
@@ -108,6 +108,28 @@ async function ensurePostgres(): Promise<void> {
         created_at timestamptz not null
       );
       create index if not exists auth_sessions_expires_idx on auth_sessions (expires_at);
+
+      create table if not exists model_registry (
+        id text primary key,
+        provider text not null,
+        display_name text not null,
+        endpoint text,
+        capabilities jsonb not null,
+        status text not null check (status in ('available', 'unavailable')),
+        context_window integer,
+        updated_at timestamptz not null
+      );
+
+      create table if not exists worker_pools (
+        id text primary key,
+        type text not null,
+        label text not null,
+        endpoint text,
+        status text not null check (status in ('online', 'degraded', 'offline')),
+        models jsonb not null,
+        concurrency integer not null,
+        updated_at timestamptz not null
+      );
     `);
 
     const count = await db.query<{ count: string }>("select count(*) from app_versions");
@@ -170,6 +192,24 @@ async function ensurePostgres(): Promise<void> {
          values ($1, $2, $3, $4, $5)
          on conflict (token_hash) do nothing`,
         [session.id, session.userId, session.tokenHash, session.expiresAt, session.createdAt],
+      );
+    }
+    for (const model of data.models ?? []) {
+      await db.query(
+        `insert into model_registry (id, provider, display_name, endpoint, capabilities, status, context_window, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         on conflict (id) do update set provider = excluded.provider, display_name = excluded.display_name, endpoint = excluded.endpoint,
+           capabilities = excluded.capabilities, status = excluded.status, context_window = excluded.context_window, updated_at = excluded.updated_at`,
+        [model.id, model.provider, model.displayName, model.endpoint ?? null, JSON.stringify(model.capabilities), model.status, model.contextWindow ?? null, model.updatedAt],
+      );
+    }
+    for (const pool of data.workerPools ?? []) {
+      await db.query(
+        `insert into worker_pools (id, type, label, endpoint, status, models, concurrency, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         on conflict (id) do update set type = excluded.type, label = excluded.label, endpoint = excluded.endpoint,
+           status = excluded.status, models = excluded.models, concurrency = excluded.concurrency, updated_at = excluded.updated_at`,
+        [pool.id, pool.type, pool.label, pool.endpoint ?? null, pool.status, JSON.stringify(pool.models), pool.concurrency, pool.updatedAt],
       );
     }
   })();
@@ -239,6 +279,34 @@ function mapAuthSession(row: Record<string, unknown>): AuthSession {
     expiresAt: new Date(String(row.expires_at)).toISOString(),
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
+}
+
+function mapModel(row: Record<string, unknown>): ModelRegistryEntry {
+  const model: ModelRegistryEntry = {
+    id: String(row.id),
+    provider: row.provider as ModelRegistryEntry["provider"],
+    displayName: String(row.display_name),
+    capabilities: row.capabilities as string[],
+    status: row.status as ModelRegistryEntry["status"],
+    updatedAt: new Date(String(row.updated_at)).toISOString(),
+  };
+  if (row.endpoint) model.endpoint = String(row.endpoint);
+  if (row.context_window) model.contextWindow = Number(row.context_window);
+  return model;
+}
+
+function mapWorkerPool(row: Record<string, unknown>): WorkerPool {
+  const pool: WorkerPool = {
+    id: String(row.id),
+    type: row.type as WorkerPool["type"],
+    label: String(row.label),
+    status: row.status as WorkerPool["status"],
+    models: row.models as string[],
+    concurrency: Number(row.concurrency),
+    updatedAt: new Date(String(row.updated_at)).toISOString(),
+  };
+  if (row.endpoint) pool.endpoint = String(row.endpoint);
+  return pool;
 }
 
 export async function saveVersion(workflowId: string, schema: UiSchema, prompt: string, status: AppVersion["status"] = "draft"): Promise<AppVersion> {
@@ -530,4 +598,65 @@ export async function deleteAuthSession(tokenHash: string): Promise<void> {
   }
   await ensurePostgres();
   await postgresPool().query("delete from auth_sessions where token_hash = $1", [tokenHash]);
+}
+
+export async function listModels(): Promise<ModelRegistryEntry[]> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return [...(data.models ?? [])].sort((left, right) => left.id.localeCompare(right.id));
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from model_registry order by id");
+  return result.rows.map(mapModel);
+}
+
+export async function upsertModels(models: ModelRegistryEntry[]): Promise<ModelRegistryEntry[]> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      const current = new Map((data.models ?? []).map((model) => [model.id, model]));
+      for (const model of models) current.set(model.id, model);
+      data.models = [...current.values()];
+      return models;
+    });
+  }
+  await ensurePostgres();
+  for (const model of models) {
+    await postgresPool().query(
+      `insert into model_registry (id, provider, display_name, endpoint, capabilities, status, context_window, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (id) do update set provider = excluded.provider, display_name = excluded.display_name, endpoint = excluded.endpoint,
+         capabilities = excluded.capabilities, status = excluded.status, context_window = excluded.context_window, updated_at = excluded.updated_at`,
+      [model.id, model.provider, model.displayName, model.endpoint ?? null, JSON.stringify(model.capabilities), model.status, model.contextWindow ?? null, model.updatedAt],
+    );
+  }
+  return models;
+}
+
+export async function listWorkerPools(): Promise<WorkerPool[]> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return [...(data.workerPools ?? [])].sort((left, right) => left.id.localeCompare(right.id));
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from worker_pools order by id");
+  return result.rows.map(mapWorkerPool);
+}
+
+export async function upsertWorkerPool(pool: WorkerPool): Promise<WorkerPool> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.workerPools = (data.workerPools ?? []).filter((item) => item.id !== pool.id);
+      data.workerPools.push(pool);
+      return pool;
+    });
+  }
+  await ensurePostgres();
+  await postgresPool().query(
+    `insert into worker_pools (id, type, label, endpoint, status, models, concurrency, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
+     on conflict (id) do update set type = excluded.type, label = excluded.label, endpoint = excluded.endpoint,
+       status = excluded.status, models = excluded.models, concurrency = excluded.concurrency, updated_at = excluded.updated_at`,
+    [pool.id, pool.type, pool.label, pool.endpoint ?? null, pool.status, JSON.stringify(pool.models), pool.concurrency, pool.updatedAt],
+  );
+  return pool;
 }

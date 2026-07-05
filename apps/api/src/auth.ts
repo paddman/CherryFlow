@@ -87,6 +87,8 @@ export async function currentUser(request: IncomingMessage): Promise<AuthUser | 
 
 function requiredRoleFor(pathname: string, method: string): AuthRole | undefined {
   if (pathname === "/api/modules" || pathname === "/api/workflows") return "viewer";
+  if (pathname === "/api/models" || pathname === "/api/worker-pools") return method === "GET" ? "viewer" : "editor";
+  if (pathname === "/api/models/sync") return "editor";
   if (/^\/api\/workflows\/[^/]+$/.test(pathname)) return "viewer";
   if (/^\/api\/workflows\/[^/]+\/graph$/.test(pathname)) return "viewer";
   if (/^\/api\/workflows\/[^/]+\/canvas$/.test(pathname) && method === "GET") return "viewer";
