@@ -1,65 +1,78 @@
 'use client';
 
 import type { Node } from '@xyflow/react';
+import type { ModuleItem } from './Sidebar';
 
-type WorkflowNodeData = {
+export type WorkflowNodeData = Record<string, unknown> & {
   label: string;
-  config?: string;
+  moduleType: string;
+  configText: string;
 };
 
-type WorkflowNode = Node<WorkflowNodeData>;
+export type WorkflowNode = Node<WorkflowNodeData>;
 
 interface ConfigPanelProps {
+  modules: ModuleItem[];
   selectedNode: WorkflowNode | null;
-  onUpdateNode: (
-    nodeId: string,
-    data: Partial<WorkflowNodeData>
-  ) => void;
+  outputNodeId: string;
+  onUpdateNode: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
+  onSetOutputNode: (nodeId: string) => void;
+  onDeleteNode: (nodeId: string) => void;
 }
 
-export function ConfigPanel({ selectedNode, onUpdateNode }: ConfigPanelProps) {
+export function ConfigPanel({ modules, selectedNode, outputNodeId, onUpdateNode, onSetOutputNode, onDeleteNode }: ConfigPanelProps) {
   if (!selectedNode) {
     return (
-      <div className="w-80 border-l bg-white p-4">
-        <p className="text-gray-500">Select a node to edit its configuration</p>
-      </div>
+      <aside className="configPanel">
+        <p className="eyebrow">Inspector</p>
+        <h2>เลือก node เพื่อแก้ config</h2>
+        <p className="muted">รองรับ JSON config ต่อ node และเลือก output node สำหรับ graph validation</p>
+      </aside>
     );
   }
 
   return (
-    <div className="w-80 border-l bg-white p-4">
-      <h3 className="mb-4 font-semibold">Node Configuration</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm" htmlFor="node-label">
-            Label
-          </label>
+    <aside className="configPanel">
+      <p className="eyebrow">Inspector</p>
+      <h2>{selectedNode.data.label}</h2>
+      <div className="configStack">
+        <label>
+          Label
           <input
-            id="node-label"
-            type="text"
             value={selectedNode.data.label}
-            onChange={(event) =>
-              onUpdateNode(selectedNode.id, { label: event.target.value })
-            }
-            className="w-full rounded border px-3 py-2"
+            onChange={(event) => onUpdateNode(selectedNode.id, { label: event.target.value })}
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-1 block text-sm" htmlFor="node-config">
-            Prompt / Config
-          </label>
+        <label>
+          Module type
+          <select
+            value={selectedNode.data.moduleType}
+            onChange={(event) => {
+              const module = modules.find((item) => item.type === event.target.value);
+              onUpdateNode(selectedNode.id, { moduleType: event.target.value, label: module?.label ?? event.target.value });
+            }}
+          >
+            {modules.map((module) => <option key={module.type} value={module.type}>{module.type}</option>)}
+          </select>
+        </label>
+
+        <label>
+          Config JSON
           <textarea
-            id="node-config"
-            value={selectedNode.data.config ?? ''}
-            onChange={(event) =>
-              onUpdateNode(selectedNode.id, { config: event.target.value })
-            }
-            className="h-32 w-full rounded border px-3 py-2"
-            placeholder="Enter prompt or configuration..."
+            value={selectedNode.data.configText}
+            onChange={(event) => onUpdateNode(selectedNode.id, { configText: event.target.value })}
+            spellCheck={false}
           />
-        </div>
+        </label>
+
+        <button type="button" className="secondaryButton" onClick={() => onSetOutputNode(selectedNode.id)}>
+          {outputNodeId === selectedNode.id ? 'เป็น Output Node แล้ว' : 'Set as Output Node'}
+        </button>
+        <button type="button" className="dangerButton" onClick={() => onDeleteNode(selectedNode.id)}>
+          Delete Node
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }

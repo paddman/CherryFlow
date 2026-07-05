@@ -3,10 +3,10 @@ import { dirname, resolve } from "node:path";
 import { Pool } from "pg";
 import type { UiSchema, WorkflowInputValues, WorkflowRun } from "@cherryflow/ui-schema";
 import { sanitizeSlug } from "@cherryflow/ui-schema";
-import type { AppVersion, PublishedApp, StoreData } from "./types.js";
+import type { AppVersion, CanvasFlow, PublishedApp, StoreData } from "./types.js";
 
 const dataFile = resolve(process.env.CHERRYFLOW_DATA_FILE ?? "./data/cherryflow.json");
-const emptyData: StoreData = { versions: [], publishedApps: [], runs: [] };
+const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [] };
 let writeQueue = Promise.resolve();
 let pool: Pool | undefined;
 let postgresReady: Promise<void> | undefined;
@@ -83,6 +83,14 @@ async function ensurePostgres(): Promise<void> {
         error text
       );
       create index if not exists workflow_runs_updated_idx on workflow_runs (updated_at desc);
+
+      create table if not exists workflow_canvases (
+        workflow_id text primary key,
+        graph jsonb not null,
+        nodes jsonb not null,
+        edges jsonb not null,
+        updated_at timestamptz not null
+      );
     `);
 
     const count = await db.query<{ count: string }>("select count(*) from app_versions");
@@ -123,6 +131,14 @@ async function ensurePostgres(): Promise<void> {
         ],
       );
     }
+    for (const canvas of data.canvases ?? []) {
+      await db.query(
+        `insert into workflow_canvases (workflow_id, graph, nodes, edges, updated_at)
+         values ($1, $2, $3, $4, $5)
+         on conflict (workflow_id) do update set graph = excluded.graph, nodes = excluded.nodes, edges = excluded.edges, updated_at = excluded.updated_at`,
+        [canvas.workflowId, JSON.stringify(canvas.graph), JSON.stringify(canvas.nodes), JSON.stringify(canvas.edges), canvas.updatedAt],
+      );
+    }
   })();
   await postgresReady;
 }
@@ -160,6 +176,16 @@ function mapRun(row: Record<string, unknown>): WorkflowRun {
   if (row.steps) run.steps = row.steps as NonNullable<WorkflowRun["steps"]>;
   if (row.error) run.error = String(row.error);
   return run;
+}
+
+function mapCanvas(row: Record<string, unknown>): CanvasFlow {
+  return {
+    workflowId: String(row.workflow_id),
+    graph: row.graph as CanvasFlow["graph"],
+    nodes: row.nodes as CanvasFlow["nodes"],
+    edges: row.edges as CanvasFlow["edges"],
+    updatedAt: new Date(String(row.updated_at)).toISOString(),
+  };
 }
 
 export async function saveVersion(workflowId: string, schema: UiSchema, prompt: string, status: AppVersion["status"] = "draft"): Promise<AppVersion> {
@@ -326,4 +352,33 @@ export async function getRun(runId: string): Promise<WorkflowRun | undefined> {
   await ensurePostgres();
   const result = await postgresPool().query("select * from workflow_runs where id = $1", [runId]);
   return result.rows[0] ? mapRun(result.rows[0]) : undefined;
+}
+
+export async function saveCanvas(canvas: Omit<CanvasFlow, "updatedAt">): Promise<CanvasFlow> {
+  const next: CanvasFlow = { ...canvas, updatedAt: new Date().toISOString() };
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.canvases = (data.canvases ?? []).filter((item) => item.workflowId !== next.workflowId);
+      data.canvases.push(next);
+      return next;
+    });
+  }
+  await ensurePostgres();
+  await postgresPool().query(
+    `insert into workflow_canvases (workflow_id, graph, nodes, edges, updated_at)
+     values ($1, $2, $3, $4, $5)
+     on conflict (workflow_id) do update set graph = excluded.graph, nodes = excluded.nodes, edges = excluded.edges, updated_at = excluded.updated_at`,
+    [next.workflowId, JSON.stringify(next.graph), JSON.stringify(next.nodes), JSON.stringify(next.edges), next.updatedAt],
+  );
+  return next;
+}
+
+export async function getCanvas(workflowId: string): Promise<CanvasFlow | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.canvases ?? []).find((canvas) => canvas.workflowId === workflowId);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from workflow_canvases where workflow_id = $1", [workflowId]);
+  return result.rows[0] ? mapCanvas(result.rows[0]) : undefined;
 }
