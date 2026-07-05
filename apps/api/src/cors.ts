@@ -4,8 +4,9 @@ const allowedOrigin = process.env.CHERRYFLOW_WEB_ORIGIN ?? "http://localhost:300
 
 export function applyCors(request: IncomingMessage, response: ServerResponse): boolean {
   response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  response.setHeader("Access-Control-Allow-Credentials", "true");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
   if (request.method === "OPTIONS") {
     response.writeHead(204).end();

@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { authorizeManagementRequest, handleAuthRoutes } from "./auth.js";
 import { applyCors } from "./cors.js";
 import { fileStorageEnabled } from "./file-storage.js";
 import { send } from "./http-utils.js";
@@ -28,6 +29,8 @@ createServer(async (request, response) => {
       });
       return;
     }
+    if (await handleAuthRoutes(request, response, url.pathname)) return;
+    if (!await authorizeManagementRequest(request, response, url.pathname)) return;
     if (await handleAgentRoutes(request, response, url.pathname)) return;
     if (await handleBuilderRoutes(request, response, url.pathname)) return;
     if (await handlePublishRoutes(request, response, url.pathname)) return;

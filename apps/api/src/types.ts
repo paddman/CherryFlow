@@ -22,6 +22,8 @@ export interface StoreData {
   publishedApps: PublishedApp[];
   runs: WorkflowRun[];
   canvases: CanvasFlow[];
+  authUsers: AuthUser[];
+  authSessions: AuthSession[];
 }
 
 export interface WorkflowDefinition {
@@ -49,4 +51,22 @@ export interface CanvasFlow {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   updatedAt: string;
+}
+
+export type AuthRole = "admin" | "editor" | "viewer";
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: AuthRole;
+  createdAt: string;
+}
+
+export interface AuthSession {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+  createdAt: string;
 }
