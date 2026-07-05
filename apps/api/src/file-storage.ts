@@ -57,7 +57,20 @@ function keyFor(prefix: string, name: string): string {
   return `${prefix}/${crypto.randomUUID()}-${safeName}`.slice(0, 500);
 }
 
-function parseDataUrl(dataUrl: string): { bytes: Buffer; contentType: string } {
+export function encodeStoredFileName(name: string): string {
+  return Buffer.from(name, "utf8").toString("base64url");
+}
+
+export function decodeStoredFileName(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return Buffer.from(value, "base64url").toString("utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+export function parseDataUrl(dataUrl: string): { bytes: Buffer; contentType: string } {
   const match = dataUrl.match(/^data:([^;,]+)?(?:;charset=[^;,]+)?;base64,(.+)$/);
   if (!match) throw new Error("Unsupported file data URL");
   return {
@@ -74,7 +87,7 @@ export async function putFile(prefix: string, name: string, mimeType: string, by
     Key: objectKey,
     Body: bytes,
     ContentType: mimeType || "application/octet-stream",
-    Metadata: { filename: name },
+    Metadata: { filename64: encodeStoredFileName(name) },
   }));
   return { objectKey, url: `/api/files/${encodeURIComponent(objectKey)}` };
 }
@@ -99,8 +112,8 @@ export async function storeWorkflowInputs(workflowId: string, runId: string, inp
   return stored;
 }
 
-export async function createFileOutput(name: string, mimeType: string, text: string): Promise<FileOutputValue> {
-  const bytes = Buffer.from(text, "utf8");
+export async function createFileOutput(name: string, mimeType: string, content: string | Buffer | Uint8Array): Promise<FileOutputValue> {
+  const bytes = typeof content === "string" ? Buffer.from(content, "utf8") : Buffer.from(content);
   if (!fileStorageEnabled()) {
     return {
       name,
@@ -129,6 +142,6 @@ export async function getStoredFile(objectKey: string): Promise<StoredObject | u
   return {
     body,
     contentType: result.ContentType || "application/octet-stream",
-    name: result.Metadata?.filename || objectKey.split("/").at(-1) || "download",
+    name: decodeStoredFileName(result.Metadata?.filename64) || result.Metadata?.filename || objectKey.split("/").at(-1) || "download",
   };
 }

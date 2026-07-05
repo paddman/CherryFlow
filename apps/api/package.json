@@ -15,11 +15,20 @@
     "@cherryflow/openclaw-adapter": "workspace:0.2.0",
     "@cherryflow/ui-schema": "workspace:0.3.0",
     "@cherryflow/workflow-engine": "workspace:0.3.0",
+    "@types/pdfkit": "^0.17.6",
+    "docx": "^9.7.1",
+    "exceljs": "^4.4.0",
+    "jszip": "^3.10.1",
+    "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.19.1",
     "pg": "^8.22.0",
+    "playwright": "^1.61.1",
+    "pptxgenjs": "^4.0.1",
     "redis": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.20.0",
     "tsx": "^4.20.0",
     "typescript": "^5.8.3"

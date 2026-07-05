@@ -1,6 +1,10 @@
 import type { WorkflowContract } from "@cherryflow/ui-schema";
 
-const schemaRules = `Return one JSON object only. Build a CherryFlow UI Schema with version, workflowId, meta, theme, and page. Allowed component types: navbar, hero, text, notice, stats, feature-grid, steps, faq, cta, footer, divider, workflow-form, job-progress, workflow-output. Use exactly one workflow-form and one workflow-output. Use at most one job-progress, navbar, and footer. Bind form fields and outputs only to names declared in the workflow contract. Navbar targets must be local anchors beginning with #. Do not return HTML, JavaScript, scripts, or remote resources.`;
+const schemaExample = `{"version":"1.0","workflowId":"<workflow id>","meta":{"name":"...","description":"..."},"theme":{"primaryColor":"#1769e0","backgroundColor":"#eef5ff","surfaceColor":"#ffffff","textColor":"#12213a","radius":"large","density":"comfortable"},"page":{"title":"...","subtitle":"...","layout":"centered","components":[{"id":"hero","type":"hero","title":"...","description":"..."},{"id":"form","type":"workflow-form","title":"...","fields":["<input name>"],"submitLabel":"..."},{"id":"progress","type":"job-progress","title":"..."},{"id":"output","type":"workflow-output","title":"...","bindings":["<output name>"],"emptyText":"..."}]}}`;
+
+const schemaRules = `Return one JSON object only, matching this exact shape (fill in real content, keep every key name identical):
+${schemaExample}
+Allowed component types: navbar, hero, text, notice, stats, feature-grid, steps, faq, cta, footer, divider, workflow-form, job-progress, workflow-output. Every component is a FLAT object with its fields directly on it (id, type, and then that type's own fields) — never wrap fields in a nested "props" object, and never make "page" a bare array; "page" must be an object containing a "components" array. Use exactly one workflow-form and one workflow-output. Use at most one job-progress, navbar, and footer. Bind form fields and outputs only to names declared in the workflow contract. Navbar targets must be local anchors beginning with #. Do not return HTML, JavaScript, scripts, or remote resources.`;
 
 function openAiResponseFormat(): { type: string } | undefined {
   const type = process.env.OPENAI_RESPONSE_FORMAT ?? "json_object";
