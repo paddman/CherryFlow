@@ -18,6 +18,7 @@ import type { WorkflowContract, WorkflowInput, WorkflowInputValues, WorkflowRun 
 import '@xyflow/react/dist/style.css';
 import './canvas.css';
 
+import { AuthGate } from '../../components/AuthGate';
 import { requestJson } from '../../lib/client';
 import { ConfigPanel, type WorkflowNode, type WorkflowNodeData } from './components/ConfigPanel';
 import { Sidebar, type ModuleItem } from './components/Sidebar';
@@ -330,8 +331,10 @@ function CanvasWorkspace() {
 
 export default function CanvasPage() {
   return (
-    <ReactFlowProvider>
-      <CanvasWorkspace />
-    </ReactFlowProvider>
+    <AuthGate>
+      <ReactFlowProvider>
+        <CanvasWorkspace />
+      </ReactFlowProvider>
+    </AuthGate>
   );
 }

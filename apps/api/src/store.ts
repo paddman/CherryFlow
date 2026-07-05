@@ -3,10 +3,10 @@ import { dirname, resolve } from "node:path";
 import { Pool } from "pg";
 import type { UiSchema, WorkflowInputValues, WorkflowRun } from "@cherryflow/ui-schema";
 import { sanitizeSlug } from "@cherryflow/ui-schema";
-import type { AppVersion, CanvasFlow, PublishedApp, StoreData } from "./types.js";
+import type { AppVersion, AuthSession, AuthUser, CanvasFlow, PublishedApp, StoreData } from "./types.js";
 
 const dataFile = resolve(process.env.CHERRYFLOW_DATA_FILE ?? "./data/cherryflow.json");
-const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [] };
+const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [], authUsers: [], authSessions: [] };
 let writeQueue = Promise.resolve();
 let pool: Pool | undefined;
 let postgresReady: Promise<void> | undefined;
@@ -91,6 +91,23 @@ async function ensurePostgres(): Promise<void> {
         edges jsonb not null,
         updated_at timestamptz not null
       );
+
+      create table if not exists auth_users (
+        id text primary key,
+        username text not null unique,
+        password_hash text not null,
+        role text not null check (role in ('admin', 'editor', 'viewer')),
+        created_at timestamptz not null
+      );
+
+      create table if not exists auth_sessions (
+        id text primary key,
+        user_id text not null references auth_users(id) on delete cascade,
+        token_hash text not null unique,
+        expires_at timestamptz not null,
+        created_at timestamptz not null
+      );
+      create index if not exists auth_sessions_expires_idx on auth_sessions (expires_at);
     `);
 
     const count = await db.query<{ count: string }>("select count(*) from app_versions");
@@ -139,6 +156,22 @@ async function ensurePostgres(): Promise<void> {
         [canvas.workflowId, JSON.stringify(canvas.graph), JSON.stringify(canvas.nodes), JSON.stringify(canvas.edges), canvas.updatedAt],
       );
     }
+    for (const user of data.authUsers ?? []) {
+      await db.query(
+        `insert into auth_users (id, username, password_hash, role, created_at)
+         values ($1, $2, $3, $4, $5)
+         on conflict (username) do nothing`,
+        [user.id, user.username, user.passwordHash, user.role, user.createdAt],
+      );
+    }
+    for (const session of data.authSessions ?? []) {
+      await db.query(
+        `insert into auth_sessions (id, user_id, token_hash, expires_at, created_at)
+         values ($1, $2, $3, $4, $5)
+         on conflict (token_hash) do nothing`,
+        [session.id, session.userId, session.tokenHash, session.expiresAt, session.createdAt],
+      );
+    }
   })();
   await postgresReady;
 }
@@ -185,6 +218,26 @@ function mapCanvas(row: Record<string, unknown>): CanvasFlow {
     nodes: row.nodes as CanvasFlow["nodes"],
     edges: row.edges as CanvasFlow["edges"],
     updatedAt: new Date(String(row.updated_at)).toISOString(),
+  };
+}
+
+function mapAuthUser(row: Record<string, unknown>): AuthUser {
+  return {
+    id: String(row.id),
+    username: String(row.username),
+    passwordHash: String(row.password_hash),
+    role: row.role as AuthUser["role"],
+    createdAt: new Date(String(row.created_at)).toISOString(),
+  };
+}
+
+function mapAuthSession(row: Record<string, unknown>): AuthSession {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    tokenHash: String(row.token_hash),
+    expiresAt: new Date(String(row.expires_at)).toISOString(),
+    createdAt: new Date(String(row.created_at)).toISOString(),
   };
 }
 
@@ -381,4 +434,100 @@ export async function getCanvas(workflowId: string): Promise<CanvasFlow | undefi
   await ensurePostgres();
   const result = await postgresPool().query("select * from workflow_canvases where workflow_id = $1", [workflowId]);
   return result.rows[0] ? mapCanvas(result.rows[0]) : undefined;
+}
+
+export async function countAuthUsers(): Promise<number> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.authUsers ?? []).length;
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query<{ count: string }>("select count(*) from auth_users");
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+export async function createAuthUser(user: AuthUser): Promise<AuthUser> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.authUsers = (data.authUsers ?? []).filter((item) => item.username !== user.username);
+      data.authUsers.push(user);
+      return user;
+    });
+  }
+  await ensurePostgres();
+  await postgresPool().query(
+    `insert into auth_users (id, username, password_hash, role, created_at)
+     values ($1, $2, $3, $4, $5)
+     on conflict (username) do update set password_hash = excluded.password_hash, role = excluded.role`,
+    [user.id, user.username, user.passwordHash, user.role, user.createdAt],
+  );
+  return user;
+}
+
+export async function getAuthUserByUsername(username: string): Promise<AuthUser | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.authUsers ?? []).find((user) => user.username === username);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_users where username = $1", [username]);
+  return result.rows[0] ? mapAuthUser(result.rows[0]) : undefined;
+}
+
+export async function getAuthUserById(userId: string): Promise<AuthUser | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.authUsers ?? []).find((user) => user.id === userId);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_users where id = $1", [userId]);
+  return result.rows[0] ? mapAuthUser(result.rows[0]) : undefined;
+}
+
+export async function listAuthUsers(): Promise<AuthUser[]> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return [...(data.authUsers ?? [])].sort((left, right) => left.username.localeCompare(right.username));
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_users order by username");
+  return result.rows.map(mapAuthUser);
+}
+
+export async function createAuthSession(session: AuthSession): Promise<AuthSession> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.authSessions = (data.authSessions ?? []).filter((item) => item.userId !== session.userId && new Date(item.expiresAt).getTime() > Date.now());
+      data.authSessions.push(session);
+      return session;
+    });
+  }
+  await ensurePostgres();
+  await postgresPool().query("delete from auth_sessions where expires_at <= now()");
+  await postgresPool().query(
+    `insert into auth_sessions (id, user_id, token_hash, expires_at, created_at) values ($1, $2, $3, $4, $5)`,
+    [session.id, session.userId, session.tokenHash, session.expiresAt, session.createdAt],
+  );
+  return session;
+}
+
+export async function getAuthSessionByTokenHash(tokenHash: string): Promise<AuthSession | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.authSessions ?? []).find((session) => session.tokenHash === tokenHash && new Date(session.expiresAt).getTime() > Date.now());
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_sessions where token_hash = $1 and expires_at > now()", [tokenHash]);
+  return result.rows[0] ? mapAuthSession(result.rows[0]) : undefined;
+}
+
+export async function deleteAuthSession(tokenHash: string): Promise<void> {
+  if (!postgresEnabled()) {
+    await mutateJson((data) => {
+      data.authSessions = (data.authSessions ?? []).filter((session) => session.tokenHash !== tokenHash);
+    });
+    return;
+  }
+  await ensurePostgres();
+  await postgresPool().query("delete from auth_sessions where token_hash = $1", [tokenHash]);
 }
