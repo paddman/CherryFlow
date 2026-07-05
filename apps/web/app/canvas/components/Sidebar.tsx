@@ -1,32 +1,43 @@
 'use client';
 
-interface SidebarProps {
-  onAddNode: (type: string, label: string) => void;
+export interface ModuleItem {
+  type: string;
+  label: string;
+  description: string;
 }
 
-const nodeTypes = [
-  { type: 'input', label: 'Trigger / Start' },
-  { type: 'default', label: 'AI Prompt' },
-  { type: 'default', label: 'Module' },
-  { type: 'output', label: 'Output' },
-] as const;
+interface SidebarProps {
+  modules: ModuleItem[];
+  onAddNode: (moduleType: string, label: string) => void;
+}
 
-export function Sidebar({ onAddNode }: SidebarProps) {
+export function Sidebar({ modules, onAddNode }: SidebarProps) {
   return (
-    <div className="w-64 border-r bg-gray-50 p-4">
-      <h2 className="mb-4 font-semibold">Nodes</h2>
-      <div className="space-y-2">
-        {nodeTypes.map((node) => (
+    <aside className="canvasSidebar">
+      <div>
+        <p className="eyebrow">Module Palette</p>
+        <h2>ลาก node ลง Canvas</h2>
+        <p className="muted">ลากหรือกดเพิ่ม module แล้วเชื่อมเส้นตาม DAG</p>
+      </div>
+      <div className="moduleList">
+        {modules.map((module) => (
           <button
-            key={node.label}
+            key={module.type}
             type="button"
-            onClick={() => onAddNode(node.type, node.label)}
-            className="w-full rounded-lg border bg-white p-3 text-left hover:bg-gray-100"
+            draggable
+            onClick={() => onAddNode(module.type, module.label)}
+            onDragStart={(event) => {
+              event.dataTransfer.setData("application/cherryflow-module", JSON.stringify(module));
+              event.dataTransfer.effectAllowed = "move";
+            }}
+            className="moduleCard"
           >
-            {node.label}
+            <strong>{module.label}</strong>
+            <code>{module.type}</code>
+            <span>{module.description}</span>
           </button>
         ))}
       </div>
-    </div>
+    </aside>
   );
 }
