@@ -6,14 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@cherryflow/ui-schema": "workspace:0.3.0",
+    "@xyflow/react": "^12.3.0",
     "next": "^16.2.10",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "reactflow": "^12.3.0"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
