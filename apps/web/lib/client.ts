@@ -1,4 +1,8 @@
-export const serviceUrl = process.env.NEXT_PUBLIC_CHERRYFLOW_API_URL ?? "http://localhost:4000";
+const configuredServiceUrl = process.env.NEXT_PUBLIC_CHERRYFLOW_API_URL?.replace(/\/$/, "");
+
+export const serviceUrl =
+  configuredServiceUrl ??
+  (typeof window === "undefined" ? "http://localhost:4000" : window.location.origin);
 
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${serviceUrl}${path}`, { credentials: "include", ...init });
