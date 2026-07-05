@@ -1,11 +1,26 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { WorkflowInputValues } from "@cherryflow/ui-schema";
 import { matchWorkflow, readJson, send } from "./http-utils.js";
+import { getStoredFile } from "./file-storage.js";
 import { startRun } from "./run-service.js";
 import { getPublishedApp, getRun } from "./store.js";
 import { getWorkflow } from "./workflows.js";
 
 export async function handleRuntimeRoutes(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
+  const fileMatch = pathname.match(/^\/api\/files\/(.+)$/);
+  if (request.method === "GET" && fileMatch) {
+    const file = await getStoredFile(decodeURIComponent(fileMatch[1] ?? ""));
+    if (!file) send(response, 404, { error: "File not found" });
+    else {
+      response.writeHead(200, {
+        "content-type": file.contentType,
+        "content-disposition": `attachment; filename="${file.name.replace(/"/g, "")}"`,
+      });
+      response.end(file.body);
+    }
+    return true;
+  }
+
   const workflowRun = matchWorkflow(pathname, "/runs");
   if (request.method === "POST" && workflowRun) {
     const body = await readJson<{ inputs?: WorkflowInputValues }>(request);
