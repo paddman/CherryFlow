@@ -30,7 +30,7 @@ export default function HomePage() {
             <a href="#features">AI Stack</a>
             <a href="#use-cases">Use Cases</a>
             <a href="#architecture">Architecture</a>
-            <Link className={styles.navButton} href="/builder">เปิด Builder</Link>
+            <Link className={styles.navButton} href="/builder" prefetch={false}>เปิด Builder</Link>
           </div>
         </nav>
       </header>
@@ -41,7 +41,7 @@ export default function HomePage() {
           <h1>สร้างระบบ AI ที่รันใน<br /><span className={styles.gradientText}>Infrastructure ของคุณเอง</span></h1>
           <p className={styles.heroLead}>CherryFlow เชื่อม Local Qwen, OpenAI-compatible API, Workflow, Agent, Machine Learning และ Deep Learning Worker ให้ทำงานร่วมกัน พร้อมเปิดใช้งานเป็น API หรือเว็บไซต์</p>
           <div className={styles.heroActions}>
-            <Link className={styles.primaryButton} href="/builder">เปิด Local AI Builder →</Link>
+            <Link className={styles.primaryButton} href="/builder" prefetch={false}>เปิด Local AI Builder →</Link>
             <a className={styles.secondaryButton} href="#architecture">ดู Architecture</a>
           </div>
           <div className={styles.trustRow}>
@@ -114,11 +114,11 @@ export default function HomePage() {
       </section>
 
       <section className={`${styles.cta} ${styles.shell}`}>
-        <div className={styles.ctaCard}><div className={styles.ctaContent}><h2>เริ่มจาก Local Qwen ที่คุณมีอยู่</h2><p>ต่อ endpoint เข้ากับ CherryFlow แล้วสร้าง Workflow, API และ AI Application จาก Infrastructure เดิม</p></div><div className={styles.ctaActions}><Link className={styles.ctaLight} href="/builder">เปิด Local AI Builder →</Link></div></div>
+        <div className={styles.ctaCard}><div className={styles.ctaContent}><h2>เริ่มจาก Local Qwen ที่คุณมีอยู่</h2><p>ต่อ endpoint เข้ากับ CherryFlow แล้วสร้าง Workflow, API และ AI Application จาก Infrastructure เดิม</p></div><div className={styles.ctaActions}><Link className={styles.ctaLight} href="/builder" prefetch={false}>เปิด Local AI Builder →</Link></div></div>
       </section>
 
       <footer className={styles.footer}>
-        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder">Builder</Link><a href="#features">AI Stack</a></div></div>
+        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><a href="#features">AI Stack</a></div></div>
       </footer>
     </main>
   );
