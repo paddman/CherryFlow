@@ -57,6 +57,29 @@ test("aliases common theme key variants onto the canonical theme fields", () => 
   assert.equal(schema.theme.textColor, "#2b2d42");
 });
 
+test("repairs missing item arrays from model-generated marketing components", () => {
+  const raw = {
+    meta: { name: "AI Report Generator" },
+    page: {
+      components: [
+        { id: "nav", type: "navbar", brand: "CherryFlow" },
+        { id: "features", type: "feature-grid", title: "Features" },
+        { id: "steps", type: "steps", title: "Steps" },
+        { id: "stats", type: "stats", title: "KPIs" },
+        { id: "faq", type: "faq", title: "FAQ" },
+        { id: "form", type: "workflow-form", submitLabel: "Go" },
+        { id: "output", type: "workflow-output" },
+      ],
+    },
+  };
+  const schema = normalizeSchema(raw, workflow, "prompt");
+  const byId = Object.fromEntries(schema.page.components.map((component) => [component.id, component]));
+  assert.deepEqual(byId.nav && "items" in byId.nav ? byId.nav.items : undefined, []);
+  assert.deepEqual(byId.features && "items" in byId.features ? byId.features.items : undefined, []);
+  assert.deepEqual(byId.form && "fields" in byId.form ? byId.form.fields : undefined, ["projectName"]);
+  assert.deepEqual(byId.output && "bindings" in byId.output ? byId.output.bindings : undefined, ["summary"]);
+});
+
 test("still throws (so the caller can fall back) when the model returns an invalid theme color", () => {
   const raw = {
     meta: { name: "AI Report Generator" },
