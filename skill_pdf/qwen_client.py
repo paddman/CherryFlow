@@ -94,13 +94,22 @@ you're given. Never invent statistics.
 
 
 def _extract_json(text):
-    """Strip ```json fences if the model added them despite instructions."""
+    """Strip fences and parse the first JSON object even if the model adds trailing text."""
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-    return json.loads(text)
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        if start < 0:
+            raise
+        decoder = json.JSONDecoder()
+        report, _ = decoder.raw_decode(text[start:])
+        return report
 
 
 def _validate(report):

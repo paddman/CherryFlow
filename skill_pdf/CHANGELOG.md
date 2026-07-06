@@ -7,3 +7,4 @@
 2026-07-06 - CLI wrapper - run_report.py - added command-line data/instruction/out wrapper wiring Qwen JSON planning to PDF rendering.
 2026-07-06 - offline Qwen fixtures - fixtures/*.json, test_build_pdf_from_fixtures.py - added saved report JSON fixtures and offline PDF build regression test.
 2026-07-06 - CherryFlow flow integration - apps/api/src/report-pdf-skill.ts, apps/api/src/module-registry.ts, apps/api/src/workflows.ts, qwen_client.py, run_report.py - added report.qwen_pdf workflow node, bearer-token support, and Thai CLI brand wiring.
+2026-07-06 - real Qwen smoke hardening - qwen_client.py - parsed the first JSON object robustly when an OpenAI-compatible model appends trailing text.
