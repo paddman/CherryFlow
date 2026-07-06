@@ -1,0 +1,33 @@
+{
+  "pages": [
+    {
+      "layout": "cover",
+      "title": "Network Daily Fixture",
+      "subtitle": "Offline JSON response sample",
+      "meta": "Fixture: network_daily"
+    },
+    {
+      "layout": "kpi_grid",
+      "heading": "Key Metrics",
+      "kpis": [
+        {"label": "Peak Inbound", "value": "612 Gbps", "delta": "+4.1%"},
+        {"label": "Peak Outbound", "value": "410 Gbps", "delta": "-3.5%"},
+        {"label": "DNS Queries", "value": "112,600", "delta": "+3.4%"}
+      ]
+    },
+    {
+      "layout": "full_chart",
+      "heading": "Traffic Trend",
+      "body": "Line chart fixture generated without any network call.",
+      "chart": {
+        "type": "line",
+        "title": "Traffic — Fixture",
+        "x": ["09:00", "10:00", "11:00", "12:00"],
+        "series": {
+          "Inbound": [612, 590, 560, 540],
+          "Outbound": [410, 398, 382, 365]
+        }
+      }
+    }
+  ]
+}

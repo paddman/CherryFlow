@@ -1,0 +1,40 @@
+{
+  "pages": [
+    {
+      "layout": "cover",
+      "title": "Operations Mix Fixture",
+      "subtitle": "Tables and multi-series charts",
+      "meta": "Fixture: operations_mix"
+    },
+    {
+      "layout": "two_col_charts",
+      "heading": "Protocol Mix",
+      "charts": [
+        {"type": "pie", "title": "Protocol Distribution", "labels": ["HTTPS", "DNS", "QUIC"], "values": [58, 24, 18]},
+        {"type": "grouped_bar", "title": "Regional Events", "labels": ["BKK", "CNX", "KKC"], "series": {"This": [22, 14, 10], "Last": [18, 13, 9]}}
+      ]
+    },
+    {
+      "layout": "chart_with_table",
+      "heading": "Risk Bands",
+      "chart": {
+        "type": "stacked_area",
+        "title": "Security Events by Band",
+        "x": ["08:00", "10:00", "12:00", "14:00"],
+        "series": {
+          "Low": [12, 16, 14, 10],
+          "Medium": [5, 7, 6, 4],
+          "High": [1, 2, 1, 1]
+        }
+      },
+      "table": {
+        "headers": ["Band", "Events", "Action"],
+        "rows": [
+          ["Low", "52", "Monitor"],
+          ["Medium", "22", "Review"],
+          ["High", "5", "Escalate"]
+        ]
+      }
+    }
+  ]
+}
