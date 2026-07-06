@@ -1,0 +1,47 @@
+{
+  "pages": [
+    {
+      "layout": "cover",
+      "title": "Advanced Chart Fixture",
+      "subtitle": "Heatmap, gauge, and timeline",
+      "meta": "Fixture: advanced_charts"
+    },
+    {
+      "layout": "full_chart",
+      "heading": "Hour × Day Heatmap",
+      "body": "Traffic volume by hour and day.",
+      "chart": {
+        "type": "heatmap",
+        "title": "Traffic Heatmap",
+        "x": ["00:00", "01:00", "02:00", "03:00"],
+        "y": ["Mon", "Tue", "Wed"],
+        "values": [[120, 150, 180, 160], [130, 190, 240, 210], [110, 170, 220, 260]],
+        "unit": "Gbps"
+      }
+    },
+    {
+      "layout": "full_chart",
+      "heading": "Bandwidth Gauge",
+      "body": "Single KPI against threshold.",
+      "chart": {
+        "type": "gauge",
+        "title": "Bandwidth Utilization",
+        "value": 72,
+        "min": 0,
+        "max": 100,
+        "threshold": 80,
+        "unit": "%"
+      }
+    },
+    {
+      "layout": "timeline",
+      "heading": "Incident Timeline",
+      "body": "Horizontal event timeline with severity colors.",
+      "events": [
+        {"date": "08:10", "label": "DNS latency alert", "detail": "p95 crossed watch threshold", "severity": "warning"},
+        {"date": "09:25", "label": "Traffic spike", "detail": "Inbound reached 612 Gbps", "severity": "high"},
+        {"date": "12:15", "label": "Service restored", "detail": "Latency returned to normal", "severity": "normal"}
+      ]
+    }
+  ]
+}

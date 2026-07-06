@@ -6,6 +6,7 @@ import { extractFileContent } from "./file-content.js";
 import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 import { computeMetrics, summarizeReport } from "./report-ai.js";
 import { buildReportDocument, normalizeReportTemplate } from "./report-document.js";
+import { buildSkillPdfReport, pdfSkillAvailable, pdfSkillScriptPath, reportPdfSkillMode } from "./report-pdf-skill.js";
 import { markdownToText, normalizeReportFormat, renderReport } from "./report-renderer.js";
 
 function isUploadedFile(value: unknown): value is UploadedFileValue {
@@ -16,6 +17,15 @@ function dependency(dependencies: Record<string, WorkflowData>, nodeId: string):
   const value = dependencies[nodeId];
   if (!value) throw new Error(`Missing dependency output: ${nodeId}`);
   return value;
+}
+
+function outputWithSummaryNote(output: WorkflowData, note: string): WorkflowData {
+  const summary = typeof output.summary === "string" ? output.summary : "";
+  return {
+    ...output,
+    qwenPdfStatus: note,
+    summary: [summary, "", "---", note].filter(Boolean).join("\n"),
+  };
 }
 
 export const moduleRegistry = new ModuleRegistry()
@@ -98,6 +108,49 @@ export const moduleRegistry = new ModuleRegistry()
         metrics,
         reportFile: await createFileOutput(report.fileName, report.mimeType, report.content),
       };
+    },
+  })
+  .register({
+    type: "report.qwen_pdf",
+    label: "Qwen PDF Skill Renderer",
+    description: "For PDF outputs, call skill_pdf's Qwen JSON planner and ReportLab renderer; fallback to the composed report unless required.",
+    run: async ({ dependencies, config }) => {
+      const input = dependency(dependencies, String(config.inputNode ?? "input"));
+      const file = dependency(dependencies, String(config.fileNode ?? "inspect"));
+      const composed = dependency(dependencies, String(config.composeNode ?? "compose"));
+      const outputFormat = normalizeReportFormat(input.outputFormat);
+      if (outputFormat !== "pdf") return composed;
+
+      const mode = reportPdfSkillMode();
+      if (mode === "disabled") return outputWithSummaryNote(composed, "Qwen PDF skill skipped: CHERRYFLOW_REPORT_PDF_SKILL is disabled.");
+
+      const scriptPath = pdfSkillScriptPath();
+      if (!pdfSkillAvailable(scriptPath)) {
+        const message = `Qwen PDF skill script is unavailable: ${scriptPath}`;
+        if (mode === "required") throw new Error(message);
+        return outputWithSummaryNote(composed, `Qwen PDF skill fallback: ${message}`);
+      }
+
+      const uploaded = input.sourceFile;
+      if (!isUploadedFile(uploaded)) throw new Error("sourceFile is required");
+
+      const projectName = String(input.projectName ?? "Untitled project");
+      const department = String(input.department ?? "unspecified");
+      const notes = String(input.notes ?? "").trim();
+      const fileName = String(file.name ?? uploaded.name ?? "source-file");
+      const extracted = await extractFileContent(uploaded);
+
+      try {
+        const skillReport = await buildSkillPdfReport({ projectName, department, notes, fileName, extracted, scriptPath });
+        return outputWithSummaryNote({
+          ...composed,
+          reportFile: await createFileOutput(skillReport.fileName, skillReport.mimeType, skillReport.content),
+        }, `Qwen PDF skill rendered: ${skillReport.fileName}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Qwen PDF skill failed";
+        if (mode === "required") throw new Error(message);
+        return outputWithSummaryNote(composed, `Qwen PDF skill fallback: ${message}`);
+      }
     },
   })
   .register(createCherryAgentModuleDefinition())

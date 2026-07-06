@@ -18,6 +18,7 @@ Current version: **0.3.0**
 |---|---|---|
 | Workflow graph engine | Available | DAG validation, cycle detection, ordered execution, per-node events |
 | Module registry | Available | Built-in modules can be registered and executed by type |
+| Qwen PDF report pipeline | Available | `report.qwen_pdf` flow node calls `skill_pdf` for code-rendered PDF reports when configured |
 | Local deterministic planner | Available | Works without any external model |
 | OpenAI-compatible provider | Available | Suitable for Qwen served by vLLM, SGLang, Ollama-compatible proxies, or similar servers |
 | OpenClaw adapter | Available | Explicit HTTP bridge adapter |
@@ -152,6 +153,7 @@ CherryFlow/
 │  │     ├─ provider-openclaw.ts   # OpenClaw bridge adapter
 │  │     ├─ local-planner.ts       # Deterministic zero-config planner
 │  │     ├─ module-registry.ts     # Built-in executable modules
+│  │     ├─ report-pdf-skill.ts    # Bridge from workflow node to skill_pdf Qwen PDF renderer
 │  │     ├─ workflows.ts           # Workflow contracts and graphs
 │  │     ├─ run-service.ts         # Run lifecycle and graph execution
 │  │     └─ store.ts               # MVP JSON persistence
@@ -163,6 +165,7 @@ CherryFlow/
 │  └─ workflow-engine/             # Graph validation, module registry, graph execution
 ├─ plugins/
 │  └─ openclaw-adapter/            # OpenClaw client boundary
+├─ skill_pdf/                      # Qwen JSON planner -> ReportLab PDF pipeline and tests
 ├─ docs/
 │  ├─ architecture.md              # Current MVP architecture and security model
 │  ├─ ai-providers.md              # AI provider configuration
