@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
-import type { UiSchema, UploadedFileValue, WorkflowContract, WorkflowInputValue, WorkflowInputValues, WorkflowRun } from "@cherryflow/ui-schema";
+import type { FileOutputValue, UiSchema, UploadedFileValue, WorkflowContract, WorkflowInputValue, WorkflowInputValues, WorkflowOutputValue, WorkflowRun } from "@cherryflow/ui-schema";
 import { requestJson } from "../lib/client";
 import { RuntimeField } from "./RuntimeField";
 import { RuntimeOutput } from "./RuntimeOutput";
@@ -20,6 +20,26 @@ function bindingsForComponent(componentBindings: string[], workflow: WorkflowCon
   return ordered.includes("reportPreview")
     ? ["reportPreview", ...ordered.filter((name) => name !== "reportPreview")]
     : ordered;
+}
+
+function isFileOutput(value: WorkflowOutputValue | undefined): value is FileOutputValue {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && ("url" in value || "dataUrl" in value) && "name" in value);
+}
+
+function PrimaryDownload({ file }: { file: FileOutputValue }) {
+  const href = file.url ?? file.dataUrl;
+  if (!href) return null;
+  const label = file.mimeType === "application/pdf" ? "ดาวน์โหลดรายงาน PDF" : "ดาวน์โหลดรายงาน";
+  return (
+    <div className="primaryDownloadPanel">
+      <div>
+        <span>ไฟล์พร้อมดาวน์โหลด</span>
+        <strong>{file.name}</strong>
+        <small>{file.mimeType}</small>
+      </div>
+      <a className="downloadButton" href={href} download={file.name}>{label}</a>
+    </div>
+  );
 }
 
 async function fileValue(file: File): Promise<UploadedFileValue> {
@@ -153,6 +173,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
             <section id={component.id} className="contentCard outputCard" key={component.id}><h2>{component.title ?? "ผลลัพธ์"}</h2>
               {!run?.outputs && <p className="muted">{component.emptyText ?? "ยังไม่มีผลลัพธ์"}</p>}
               {run && !hasProgressComponent && <RunFlow run={run} />}
+              {isFileOutput(run?.outputs?.reportFile) && <PrimaryDownload file={run.outputs.reportFile} />}
               {bindingsForComponent(component.bindings, workflow).map((binding) => { const output = workflow.outputs.find((item) => item.name === binding); return output && run?.outputs ? <article className={`outputBlock output-${binding}`} key={binding}><h3>{output.label}</h3><RuntimeOutput value={run.outputs[binding]} /></article> : null; })}
               {run?.status === "failed" && <p className="errorMessage">{run.error}</p>}
             </section>
