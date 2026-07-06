@@ -112,6 +112,11 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .output-reportPreview { border-top: 0; padding-top: 0; }
 .markdownOutput { white-space: pre-wrap; line-height: 1.65; }
 .downloadButton { background: var(--cf-primary); color: #fff; }
+.primaryDownloadPanel { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 0 20px; padding: 16px; border: 1px solid rgba(23,105,224,.22); border-radius: 18px; background: linear-gradient(135deg,rgba(23,105,224,.10),rgba(255,255,255,.92)); box-shadow: 0 16px 40px rgba(23,105,224,.10); }
+.primaryDownloadPanel div { display: grid; gap: 4px; min-width: 0; }
+.primaryDownloadPanel span { color: #52627a; font-size: 12px; font-weight: 800; }
+.primaryDownloadPanel strong { color: var(--cf-text); overflow-wrap: anywhere; }
+.primaryDownloadPanel small { color: #66758d; font-size: 12px; }
 .tableWrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 11px; border-bottom: 1px solid rgba(80,100,130,.2); }
@@ -201,6 +206,7 @@ th { opacity: .65; font-size: 12px; text-transform: uppercase; }
   .schemaRuntime { padding: 24px 12px; }
   .formGrid, .featureGrid.columns-2, .featureGrid.columns-3 { grid-template-columns: 1fr; }
   .runFlowHeader, .progressCardHeader { flex-direction: column; }
+  .primaryDownloadPanel { align-items: stretch; flex-direction: column; }
   .runFlowTrack { grid-template-columns: 1fr; }
   .reportHero, .reportColumns { grid-template-columns: 1fr; flex-direction: column; }
   .reportMetricGrid, .reportChartGrid, .reportFlowTrack { grid-template-columns: 1fr; }
