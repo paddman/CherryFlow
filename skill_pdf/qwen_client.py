@@ -40,6 +40,25 @@ def _auth_headers():
     )
     return {"Authorization": f"Bearer {token}"} if token else {}
 
+
+def _env_flag(name, default=True):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "off", "no", "none", ""}
+
+
+def _should_use_guided_json(base_url, use_guided_json):
+    """vLLM supports extra_body.guided_json; hosted APIs usually do not."""
+    if not use_guided_json:
+        return False
+    if not _env_flag("QWEN_USE_GUIDED_JSON", True):
+        return False
+    host = base_url.lower()
+    if "api.deepseek.com" in host:
+        return False
+    return True
+
 # Minimal schema: forces valid JSON + a "pages" array where every page has a
 # "layout" string. We do NOT try to fully constrain every layout's fields via
 # guided_json (gets unwieldy with 8 layout shapes) — instead the system
@@ -95,6 +114,8 @@ you're given. Never invent statistics.
 
 def _extract_json(text):
     """Strip fences and parse the first JSON object even if the model adds trailing text."""
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Model response content was empty; expected JSON text")
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -114,10 +135,19 @@ def _extract_json(text):
 
 def _validate(report):
     """Fail loudly (before matplotlib runs) if Qwen used an unknown layout/chart type."""
-    for page in report.get("pages", []):
+    if not isinstance(report, dict):
+        raise ValueError("Report JSON must be an object with a pages array")
+    pages = report.get("pages")
+    if not isinstance(pages, list) or not pages:
+        raise ValueError("Report JSON must include a non-empty pages array")
+    for page in pages:
+        if not isinstance(page, dict):
+            raise ValueError("Every page must be a JSON object")
         if page["layout"] not in LAYOUTS:
             raise ValueError(f"Unknown layout from model: {page['layout']}")
         for chart in ([page["chart"]] if "chart" in page else page.get("charts", [])):
+            if not isinstance(chart, dict):
+                raise ValueError("Every chart must be a JSON object")
             if chart["type"] not in RENDERERS:
                 raise ValueError(f"Unknown chart type from model: {chart['type']}")
     return report
@@ -162,11 +192,14 @@ def generate_report_json(raw_data_text, instruction, base_url=VLLM_BASE_URL,
             {"role": "user", "content": f"Instruction: {instruction}\n\nData:\n{raw_data_text}"},
         ],
         "temperature": 0.2,
-        "max_tokens": 4000,
+        "max_tokens": int(os.getenv("OPENAI_MAX_TOKENS", "4000") or "4000"),
     }
-    if use_guided_json:
+    if _should_use_guided_json(base_url, use_guided_json):
         # vLLM extension — forces syntactically valid JSON matching the schema
         payload["extra_body"] = {"guided_json": REPORT_JSON_SCHEMA}
+    elif _env_flag("OPENAI_RESPONSE_FORMAT_JSON", True):
+        # Hosted OpenAI-compatible APIs such as DeepSeek support JSON object mode.
+        payload["response_format"] = {"type": "json_object"}
 
     last_err = None
     for attempt in range(retries + 1):
@@ -180,7 +213,7 @@ def generate_report_json(raw_data_text, instruction, base_url=VLLM_BASE_URL,
         try:
             report = _extract_json(content)
             return _validate(report)
-        except (json.JSONDecodeError, ValueError, KeyError) as e:
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
             last_err = e
             # tell the model exactly what broke and let it try again
             payload["messages"].append({"role": "assistant", "content": content})
