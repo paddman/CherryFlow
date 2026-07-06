@@ -1,0 +1,245 @@
+.builderFlowPanel {
+  min-height: calc(100vh - 128px);
+  overflow: hidden;
+  border: 1px solid #d7e2ef;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(32,72,126,.1);
+}
+
+.builderFlowEmpty {
+  display: grid;
+  place-items: center;
+  color: #718198;
+}
+
+.builderFlowHeader {
+  min-height: 92px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #dce5f2;
+  background: rgba(255,255,255,.95);
+}
+
+.builderFlowHeader h2 {
+  margin: 0 0 7px;
+  font-size: 24px;
+}
+
+.builderFlowHeader .sectionLabel {
+  margin-bottom: 5px;
+}
+
+.builderGraphValid,
+.builderGraphInvalid {
+  display: inline-flex;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.builderGraphValid {
+  background: #e9f8ef;
+  color: #17643b;
+}
+
+.builderGraphInvalid {
+  background: #fff0f0;
+  color: #a22929;
+}
+
+.builderFlowCanvas {
+  position: relative;
+  height: calc(100vh - 249px);
+  min-height: 560px;
+  background: linear-gradient(180deg,#f8fbff,#eef5ff);
+}
+
+.builderFlowCanvas .react-flow__edge-path {
+  stroke: #6c91c4;
+  stroke-width: 2.2;
+}
+
+.builderFlowCanvas .react-flow__arrowhead polyline {
+  stroke: #6c91c4;
+  fill: #6c91c4;
+}
+
+.builderFlowCanvas .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid #d7e2ef;
+  border-radius: 14px;
+  background: rgba(255,255,255,.94);
+}
+
+.builderFlowCanvas .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid #d7e2ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(32,72,126,.12);
+}
+
+.builderFlowNode {
+  position: relative;
+  width: 218px;
+  min-height: 108px;
+  box-sizing: border-box;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 17px 18px;
+  border: 1px solid #cbd9ea;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(35,68,115,.13);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.builderFlowNode:hover,
+.builderFlowNode.selected {
+  transform: translateY(-2px);
+  border-color: #1769e0;
+  box-shadow: 0 20px 44px rgba(23,105,224,.18);
+}
+
+.builderFlowNode-input {
+  border-top: 4px solid #2a8b57;
+}
+
+.builderFlowNode-module {
+  border-top: 4px solid #1769e0;
+}
+
+.builderFlowNode-output {
+  border-top: 4px solid #7256c8;
+}
+
+.builderFlowNodeRole {
+  justify-self: start;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #edf3fb;
+  color: #526987;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.builderFlowNode strong {
+  color: #152942;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.builderFlowNode small {
+  color: #6a7d96;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.builderFlowNode em {
+  justify-self: start;
+  color: #7256c8;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.builderFlowNode .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  background: #1769e0;
+  box-shadow: 0 0 0 1px #1769e0;
+}
+
+.builderFlowInspector {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 6;
+  width: min(310px,calc(100% - 36px));
+  box-sizing: border-box;
+  padding: 18px;
+  border: 1px solid #d5e1ef;
+  border-radius: 18px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 24px 70px rgba(25,58,104,.2);
+}
+
+.builderFlowInspector > button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  background: #edf3fb;
+  color: #234b7c;
+  font-size: 20px;
+}
+
+.builderFlowInspector h3 {
+  margin: 0 36px 8px 0;
+  color: #172b46;
+}
+
+.builderFlowInspector code {
+  display: inline-flex;
+  margin-bottom: 15px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #edf3fb;
+  color: #31577f;
+  font-size: 11px;
+}
+
+.builderFlowInspector > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #66788f;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.builderFlowInspector pre {
+  max-height: 270px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: #0d1728;
+  color: #dce8ff;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 680px) {
+  .builderFlowHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .builderFlowCanvas {
+    height: 650px;
+    min-height: 650px;
+  }
+
+  .builderFlowNode {
+    width: 190px;
+  }
+
+  .builderFlowInspector {
+    top: auto;
+    bottom: 18px;
+  }
+}
