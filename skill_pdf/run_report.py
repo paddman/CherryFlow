@@ -4,12 +4,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from brand import CORPORATE_BLUE, NT_BRAND
+from brand import CORPORATE_BLUE, NT_BRAND, THAI_NT_BRAND
 from build_pdf import build_pdf
 from qwen_client import MODEL_NAME, VLLM_BASE_URL, generate_report_json
 
 BRANDS = {
     "nt": NT_BRAND,
+    "thai_nt": THAI_NT_BRAND,
     "corporate_blue": CORPORATE_BLUE,
 }
 

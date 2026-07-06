@@ -38,9 +38,28 @@ python3 run_report.py \
   --data dns_traffic_log.csv \
   --instruction "Summarize today's DNS and traffic logs for an executive report" \
   --out daily_report.pdf \
-  --brand nt \
+  --brand thai_nt \
   --base-url http://localhost:8000/v1 \
   --model Qwen2.5-72B-Instruct
+```
+
+If the endpoint requires a bearer token, set one of `QWEN_API_KEY`,
+`OPENAI_API_KEY`, `LM_API_TOKEN`, or `VLLM_API_KEY`; the CLI passes it as the
+OpenAI-compatible `Authorization: Bearer ...` header.
+
+## CherryFlow workflow integration
+
+CherryFlow's `report-generator` graph includes a `report.qwen_pdf` node. When
+the selected output format is PDF, the API calls this CLI and replaces the
+downloadable report file with the code-rendered Qwen PDF. In `auto` mode the
+workflow falls back to the built-in renderer if the skill or model endpoint is
+unavailable:
+
+```env
+CHERRYFLOW_REPORT_PDF_SKILL=auto
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=local-or-empty
+OPENAI_MODEL=Qwen2.5-72B-Instruct
 ```
 
 ## Wire it to your real vLLM endpoint
@@ -82,6 +101,7 @@ Swap the `brand=` argument in `build_pdf()` — see `CORPORATE_BLUE` in
 matches, since nothing is hardcoded outside `brand.py`.
 
 Thai ReportLab text is supported by bundled Sarabun regular/bold fonts. Use
-`THAI_NT_BRAND` from `brand.py` when the report body contains Thai text. The
-default English-oriented brand configs still use Helvetica, so existing output
-style remains stable unless a brand opts into Sarabun.
+`THAI_NT_BRAND` from `brand.py` or `--brand thai_nt` in the CLI when the
+report body contains Thai text. The default English-oriented brand configs
+still use Helvetica, so existing output style remains stable unless a brand
+opts into Sarabun.

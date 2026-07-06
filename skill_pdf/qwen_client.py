@@ -8,6 +8,7 @@ Usage:
     build_pdf(report, "out.pdf")
 """
 import json
+import os
 import time
 import requests
 from templates import LAYOUTS
@@ -27,6 +28,17 @@ class QwenNetworkError(RuntimeError):
 
 class QwenJSONValidationError(RuntimeError):
     """Raised when Qwen responds but never returns valid report JSON."""
+
+
+def _auth_headers():
+    """Use the same env names as CherryFlow plus common local-model aliases."""
+    token = (
+        os.getenv("QWEN_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("LM_API_TOKEN")
+        or os.getenv("VLLM_API_KEY")
+    )
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 # Minimal schema: forces valid JSON + a "pages" array where every page has a
 # "layout" string. We do NOT try to fully constrain every layout's fields via
@@ -109,7 +121,7 @@ def _post_with_retries(url, payload, connect_timeout=CONNECT_TIMEOUT_SECONDS,
     last_err = None
     for attempt in range(http_retries + 1):
         try:
-            resp = requests.post(url, json=payload, timeout=(connect_timeout, read_timeout))
+            resp = requests.post(url, json=payload, headers=_auth_headers(), timeout=(connect_timeout, read_timeout))
             resp.raise_for_status()
             return resp
         except requests.RequestException as exc:

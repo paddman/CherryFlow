@@ -17,6 +17,27 @@ OPENAI_MODEL=qwen3.5-35b-a3b
 
 CherryFlow sends the workflow contract, current schema when refining, and the user prompt to `/chat/completions`. The response must contain a JSON object matching the CherryFlow UI Schema. The API normalizes and validates it before returning it to the browser.
 
+## Qwen PDF report skill
+
+The built-in `report-generator` workflow includes a `report.qwen_pdf` node.
+When the user selects PDF output, this node can call
+`skill_pdf/run_report.py`, which asks Qwen for renderer-safe report JSON and
+then builds the final PDF with code-controlled ReportLab layouts/charts.
+
+```env
+CHERRYFLOW_REPORT_PDF_SKILL=auto
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=local-or-empty
+OPENAI_MODEL=Qwen2.5-72B-Instruct
+```
+
+`CHERRYFLOW_REPORT_PDF_SKILL=auto` falls back to the normal CherryFlow report
+renderer if the Python skill or model endpoint is unavailable. Use
+`CHERRYFLOW_REPORT_PDF_SKILL=required` when a failed Qwen PDF render should
+fail the workflow run. The Python client also accepts `QWEN_API_KEY`,
+`LM_API_TOKEN`, or `VLLM_API_KEY` as bearer-token aliases for local model
+gateways.
+
 ## OpenClaw bridge
 
 ```env
