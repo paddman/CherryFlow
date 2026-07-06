@@ -54,7 +54,10 @@ function repairComponents(components: UiComponent[], workflow: WorkflowContract)
     repaired.push({ ...component, id } as UiComponent);
   };
 
-  for (const component of components) {
+  for (let component of components) {
+    const normalized = normalizeComponentShape(component, workflow);
+    if (!normalized) continue;
+    component = normalized;
     if (["job-progress", "navbar", "footer"].includes(component.type)) {
       if (seenSingletons.has(component.type)) continue;
       seenSingletons.add(component.type);
@@ -62,9 +65,10 @@ function repairComponents(components: UiComponent[], workflow: WorkflowContract)
     if (component.type === "workflow-form") {
       if (hasForm) continue;
       hasForm = true;
+      const fields = component.fields.filter((field) => workflow.inputs.some((input) => input.name === field));
       add({
         ...component,
-        fields: component.fields.filter((field) => workflow.inputs.some((input) => input.name === field)),
+        fields: fields.length ? fields : workflow.inputs.map((input) => input.name),
         submitLabel: component.submitLabel || "Run workflow",
       });
       continue;
@@ -72,9 +76,10 @@ function repairComponents(components: UiComponent[], workflow: WorkflowContract)
     if (component.type === "workflow-output") {
       if (hasOutput) continue;
       hasOutput = true;
+      const bindings = component.bindings.filter((binding) => workflow.outputs.some((output) => output.name === binding));
       add({
         ...component,
-        bindings: component.bindings.filter((binding) => workflow.outputs.some((output) => output.name === binding)),
+        bindings: bindings.length ? bindings : workflow.outputs.map((output) => output.name),
       });
       continue;
     }
@@ -103,6 +108,89 @@ function repairComponents(components: UiComponent[], workflow: WorkflowContract)
   }
 
   return repaired;
+}
+
+function stringValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function arrayValue<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
+}
+
+function normalizeComponentShape(component: UiComponent, workflow: WorkflowContract): UiComponent | undefined {
+  const raw = component as unknown as Record<string, unknown>;
+  const id = stringValue(raw.id, stringValue(raw.type, "component"));
+  switch (component.type) {
+    case "navbar":
+      return {
+        ...component,
+        id,
+        brand: stringValue(raw.brand, workflow.name),
+        items: arrayValue<{ label?: unknown; target?: unknown }>(raw.items)
+          .map((item, index) => ({
+            label: stringValue(item.label, `Section ${index + 1}`),
+            target: stringValue(item.target, "#form"),
+          })),
+      };
+    case "feature-grid":
+      return {
+        ...component,
+        id,
+        columns: component.columns === 2 || component.columns === 3 ? component.columns : 3,
+        items: arrayValue<{ title?: unknown; description?: unknown }>(raw.items)
+          .map((item) => ({ title: stringValue(item.title, "Feature"), description: stringValue(item.description) })),
+      };
+    case "steps":
+      return {
+        ...component,
+        id,
+        items: arrayValue<{ title?: unknown; description?: unknown }>(raw.items)
+          .map((item) => ({ title: stringValue(item.title, "Step"), description: stringValue(item.description) })),
+      };
+    case "stats":
+      return {
+        ...component,
+        id,
+        items: arrayValue<{ value?: unknown; label?: unknown; detail?: unknown }>(raw.items)
+          .map((item) => ({ value: stringValue(item.value, "-"), label: stringValue(item.label, "Metric"), detail: stringValue(item.detail) })),
+      };
+    case "faq":
+      return {
+        ...component,
+        id,
+        items: arrayValue<{ question?: unknown; answer?: unknown }>(raw.items)
+          .map((item) => ({ question: stringValue(item.question, "Question"), answer: stringValue(item.answer) })),
+      };
+    case "workflow-form":
+      return {
+        ...component,
+        id,
+        fields: arrayValue<string>(raw.fields).map((field) => String(field)),
+        submitLabel: stringValue(raw.submitLabel, "Run workflow"),
+      };
+    case "workflow-output":
+      return {
+        ...component,
+        id,
+        bindings: arrayValue<string>(raw.bindings).map((binding) => String(binding)),
+      };
+    case "hero":
+      return { ...component, id, title: stringValue(raw.title, workflow.name) };
+    case "text":
+      return { ...component, id, body: stringValue(raw.body) };
+    case "notice":
+      return { ...component, id, tone: ["info", "success", "warning"].includes(String(raw.tone)) ? component.tone : "info", body: stringValue(raw.body) };
+    case "cta":
+      return { ...component, id, title: stringValue(raw.title, "Start"), buttonLabel: stringValue(raw.buttonLabel, "Run workflow") };
+    case "footer":
+      return { ...component, id, brand: stringValue(raw.brand, workflow.name) };
+    case "divider":
+    case "job-progress":
+      return { ...component, id };
+    default:
+      return undefined;
+  }
 }
 
 export function normalizeSchema(rawValue: unknown, workflow: WorkflowContract, prompt: string): UiSchema {

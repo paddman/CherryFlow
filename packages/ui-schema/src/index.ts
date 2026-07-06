@@ -134,6 +134,15 @@ export interface UiValidationResult { valid: boolean; errors: string[] }
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const SAFE_TARGET = /^#[a-zA-Z][a-zA-Z0-9_-]{0,79}$/;
 
+function componentItems(component: UiComponent): unknown[] {
+  return Array.isArray((component as { items?: unknown }).items) ? (component as { items: unknown[] }).items : [];
+}
+
+function componentStrings(component: UiComponent, key: "fields" | "bindings"): string[] {
+  const value = (component as unknown as Record<string, unknown>)[key];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
 export function createDefaultTheme(): UiTheme {
   return {
     primaryColor: "#1769e0",
@@ -173,23 +182,42 @@ export function validateUiSchema(schema: UiSchema, workflow: WorkflowContract): 
 
     if (component.type === "workflow-form") {
       formCount += 1;
-      for (const field of component.fields) if (!inputNames.has(field)) errors.push(`Unknown input binding: ${field}`);
+      if (!Array.isArray(component.fields)) errors.push("workflow-form.fields must be an array");
+      for (const field of componentStrings(component, "fields")) if (!inputNames.has(field)) errors.push(`Unknown input binding: ${field}`);
     }
     if (component.type === "job-progress") progressCount += 1;
     if (component.type === "workflow-output") {
       outputCount += 1;
-      for (const binding of component.bindings) if (!outputNames.has(binding)) errors.push(`Unknown output binding: ${binding}`);
+      if (!Array.isArray(component.bindings)) errors.push("workflow-output.bindings must be an array");
+      for (const binding of componentStrings(component, "bindings")) if (!outputNames.has(binding)) errors.push(`Unknown output binding: ${binding}`);
     }
     if (component.type === "navbar") {
       navbarCount += 1;
-      if (component.items.length > 8) errors.push("navbar supports at most 8 items");
-      for (const item of component.items) if (!SAFE_TARGET.test(item.target)) errors.push(`Invalid navbar target: ${item.target}`);
+      if (!Array.isArray(component.items)) errors.push("navbar.items must be an array");
+      const items = componentItems(component);
+      if (items.length > 8) errors.push("navbar supports at most 8 items");
+      for (const item of items) {
+        const target = typeof item === "object" && item ? (item as { target?: unknown }).target : undefined;
+        if (typeof target !== "string" || !SAFE_TARGET.test(target)) errors.push(`Invalid navbar target: ${String(target ?? "")}`);
+      }
     }
     if (component.type === "footer") footerCount += 1;
-    if (component.type === "feature-grid" && component.items.length > 9) errors.push("feature-grid supports at most 9 items");
-    if (component.type === "steps" && component.items.length > 9) errors.push("steps supports at most 9 items");
-    if (component.type === "stats" && component.items.length > 8) errors.push("stats supports at most 8 items");
-    if (component.type === "faq" && component.items.length > 12) errors.push("faq supports at most 12 items");
+    if (component.type === "feature-grid") {
+      if (!Array.isArray(component.items)) errors.push("feature-grid.items must be an array");
+      if (componentItems(component).length > 9) errors.push("feature-grid supports at most 9 items");
+    }
+    if (component.type === "steps") {
+      if (!Array.isArray(component.items)) errors.push("steps.items must be an array");
+      if (componentItems(component).length > 9) errors.push("steps supports at most 9 items");
+    }
+    if (component.type === "stats") {
+      if (!Array.isArray(component.items)) errors.push("stats.items must be an array");
+      if (componentItems(component).length > 8) errors.push("stats supports at most 8 items");
+    }
+    if (component.type === "faq") {
+      if (!Array.isArray(component.items)) errors.push("faq.items must be an array");
+      if (componentItems(component).length > 12) errors.push("faq supports at most 12 items");
+    }
   }
 
   if (formCount !== 1) errors.push("A page must contain exactly one workflow-form");

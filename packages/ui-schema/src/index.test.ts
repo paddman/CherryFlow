@@ -53,3 +53,27 @@ test("rejects unsafe website navigation targets", () => {
   };
   assert.equal(validateUiSchema(schema, workflow).valid, false);
 });
+
+test("reports malformed component arrays instead of throwing", () => {
+  const schema = {
+    version: "1.0",
+    workflowId: "report",
+    meta: { name: "Malformed" },
+    theme: createDefaultTheme(),
+    page: {
+      title: "Malformed",
+      layout: "centered",
+      components: [
+        { id: "nav", type: "navbar", brand: "CherryFlow" },
+        { id: "features", type: "feature-grid", columns: 3 },
+        { id: "form", type: "workflow-form", submitLabel: "Run" },
+        { id: "output", type: "workflow-output" },
+      ],
+    },
+  } as unknown as UiSchema;
+  const result = validateUiSchema(schema, workflow);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((error) => error.includes("navbar.items")));
+  assert.ok(result.errors.some((error) => error.includes("workflow-form.fields")));
+  assert.ok(result.errors.some((error) => error.includes("workflow-output.bindings")));
+});

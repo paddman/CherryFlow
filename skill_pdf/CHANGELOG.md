@@ -9,3 +9,4 @@
 2026-07-06 - CherryFlow flow integration - apps/api/src/report-pdf-skill.ts, apps/api/src/module-registry.ts, apps/api/src/workflows.ts, qwen_client.py, run_report.py - added report.qwen_pdf workflow node, bearer-token support, and Thai CLI brand wiring.
 2026-07-06 - real Qwen smoke hardening - qwen_client.py - parsed the first JSON object robustly when an OpenAI-compatible model appends trailing text.
 2026-07-06 - DeepSeek API support - qwen_client.py - disabled vLLM guided_json for api.deepseek.com, used JSON object mode, and retried empty model content cleanly.
+2026-07-06 - large CSV PDF resilience - run_report.py - summarized large tabular inputs into a computed data profile and added deterministic report JSON fallback when model planning returns invalid JSON.
