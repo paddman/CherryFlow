@@ -13,6 +13,7 @@ export type LaneNodeData = Record<string, unknown> & {
 export type StepNodeData = Record<string, unknown> & {
   kind: 'step';
   stepKind: StepKind;
+  referenceCode?: string;
   title: string;
   description: string;
   owner: string;
@@ -37,7 +38,7 @@ export type SavedProcess = {
 export const LANE_WIDTH = 340;
 export const LANE_HEIGHT = 1240;
 export const LANE_GAP = 34;
-export const STORAGE_KEY = 'cherryflow.process-builder.v1';
+export const STORAGE_KEY = 'cherryflow.process-builder.v2';
 export const laneX = (index: number) => 40 + index * (LANE_WIDTH + LANE_GAP);
 
 export const stepLabels: Record<StepKind, string> = {
@@ -89,6 +90,7 @@ export function makeStep(
   description: string,
   owner: string,
   slaHours = 0,
+  referenceCode = '',
 ): StepFlowNode {
   return {
     id,
@@ -97,6 +99,7 @@ export function makeStep(
     data: {
       kind: 'step',
       stepKind,
+      referenceCode,
       title,
       description,
       owner,
@@ -113,34 +116,36 @@ export function makeStep(
 export function createTemplate(): SavedProcess {
   const nodes: BuilderNode[] = [
     makeLane('lane-requester', 'ฝ่ายงาน', 0, '#2563eb'),
-    makeLane('lane-helpdesk', 'Helpdesk', 1, '#7c3aed'),
-    makeLane('lane-support', 'Support', 2, '#0891b2'),
-    makeStep('start', 'lane-requester', 0, 118, 'start', 'เริ่มขอใช้บริการ', 'เริ่มต้นคำขอเปิดใช้งาน NT Cloud Service', 'ฝ่ายงาน'),
-    makeStep('request-form', 'lane-requester', 0, 240, 'task', 'กรอกข้อมูลคำขอ', 'กรอกข้อมูลบริการ Cloud Service ในใบเชื่อมโยง', 'ฝ่ายงาน', 2),
-    makeStep('om-register', 'lane-requester', 0, 392, 'task', 'เปิดงานในระบบ OM', 'แนบเอกสารใบเชื่อมโยง ใบเสนอราคา และ Key ข้อมูลในระบบ OM', 'ฝ่ายงาน', 4),
-    makeStep('helpdesk-form', 'lane-helpdesk', 1, 285, 'task', 'กรอกแบบฟอร์มเปิดบริการ', 'ตรวจสอบเอกสารและกรอกแบบฟอร์มการเปิดบริการ NT Cloud', 'Helpdesk', 4),
-    makeStep('support-create-vm', 'lane-support', 2, 420, 'task', 'สร้าง VM ตามคำขอ', 'ดำเนินการสร้าง VM ตามข้อมูลในแบบฟอร์ม', 'Support', 8),
-    makeStep('send-credential', 'lane-support', 2, 195, 'notification', 'แจ้งข้อมูลเข้าใช้งาน', 'ส่ง Username และ Password ไปยังอีเมลลูกค้า', 'Support', 1),
-    makeStep('support-reply', 'lane-support', 2, 600, 'task', 'ตอบกลับผลการดำเนินการ', 'บันทึกผลและตอบกลับข้อมูลในแบบฟอร์มการเปิดบริการ', 'Support', 1),
-    makeStep('helpdesk-check', 'lane-helpdesk', 1, 560, 'approval', 'ตรวจสอบข้อมูลการเปิดบริการ', 'ตรวจสอบความครบถ้วนของข้อมูลจาก Support', 'Helpdesk', 2),
-    makeStep('helpdesk-reply', 'lane-helpdesk', 1, 722, 'notification', 'แจ้งผลกลับฝ่ายงาน', 'ตอบกลับข้อมูลในแบบฟอร์มใบเชื่อมโยง NT Cloud', 'Helpdesk', 1),
-    makeStep('requester-test', 'lane-requester', 0, 660, 'approval', 'ทดสอบใช้งานลูกค้า', 'นำรายละเอียดไปใส่ใน OM เพื่อเรียกชำระเงินและทดสอบใช้งาน', 'ฝ่ายงาน', 8),
-    makeStep('helpdesk-confirm', 'lane-helpdesk', 1, 868, 'approval', 'ตรวจสอบการเรียกชำระเงิน', 'ยืนยันว่าข้อมูลใน OM พร้อมสำหรับการเรียกเก็บค่าบริการ', 'Helpdesk', 2),
-    makeStep('close-task', 'lane-helpdesk', 1, 994, 'task', 'ปิด Task งาน', 'บันทึกสถานะปิดงานและเก็บหลักฐานการดำเนินการ', 'Helpdesk', 1),
-    makeStep('end', 'lane-helpdesk', 1, 1115, 'end', 'สิ้นสุดกระบวนการ', 'งานเปิดบริการเสร็จสมบูรณ์', 'Helpdesk'),
+    makeLane('lane-helpdesk', 'Helpdesk', 1, '#059669'),
+    makeLane('lane-support', 'Support', 2, '#ea580c'),
+    makeStep('start', 'lane-requester', 0, 118, 'start', 'START', 'เริ่มต้นคำขอเปิดใช้งาน NT Cloud Service', 'ฝ่ายงาน'),
+    makeStep('request-form', 'lane-requester', 0, 220, 'task', 'กรอกข้อมูลคำขอใช้บริการ', 'กรอกแบบฟอร์ม NT Cloud Service ตามลิงก์ที่กำหนด', 'ฝ่ายงาน', 2, '1'),
+    makeStep('om-register', 'lane-requester', 0, 360, 'task', 'ส่งเอกสารและรายละเอียด', 'แนบเอกสารใบเชื่อมโยง ใบเสนอราคา และ Key เข้าสู่ระบบ OM', 'ฝ่ายงาน', 4, '2'),
+    makeStep('helpdesk-check-docs', 'lane-helpdesk', 1, 360, 'approval', 'ตรวจสอบเอกสาร', 'ตรวจสอบข้อมูลเอกสาร ใบเชื่อมโยง และใบเสนอราคา', 'Helpdesk', 2, '3'),
+    makeStep('helpdesk-form', 'lane-helpdesk', 1, 220, 'task', 'กรอกแบบฟอร์มเปิดบริการ', 'บันทึกข้อมูลในแบบฟอร์มการเปิดบริการ NT Cloud', 'Helpdesk', 4, '4'),
+    makeStep('support-create-vm', 'lane-support', 2, 220, 'task', 'สร้าง VM', 'ดำเนินการสร้าง VM ตามข้อมูลในแบบฟอร์ม', 'Support', 8, '5'),
+    makeStep('send-credential', 'lane-support', 2, 96, 'notification', 'แจ้งข้อมูลเข้าใช้งาน', 'ส่ง Username และ Password ไปยังอีเมลลูกค้า', 'Support', 1, '6'),
+    makeStep('support-reply', 'lane-support', 2, 500, 'task', 'ตอบกลับผลการดำเนินงาน', 'อัปเดตข้อมูลในแบบฟอร์มการเปิดบริการ NT Cloud', 'Support', 1, '7'),
+    makeStep('helpdesk-check', 'lane-helpdesk', 1, 500, 'approval', 'ตรวจสอบผลจาก Support', 'ตรวจสอบความครบถ้วนของข้อมูลในแบบฟอร์ม', 'Helpdesk', 2, '8'),
+    makeStep('helpdesk-reply', 'lane-helpdesk', 1, 650, 'notification', 'ตอบกลับข้อมูลให้ฝ่ายงาน', 'ส่งรายละเอียดผ่านอีเมลหรือลิงก์ NT Cloud', 'Helpdesk', 1, '9'),
+    makeStep('requester-om-billing', 'lane-requester', 0, 650, 'task', 'บันทึกรายละเอียดใน OM', 'นำข้อมูลที่ได้รับไปใส่ในระบบ OM เพื่อเรียกชำระเงินลูกค้า', 'ฝ่ายงาน', 4, '10'),
+    makeStep('helpdesk-confirm', 'lane-helpdesk', 1, 810, 'approval', 'ตรวจสอบการเรียกชำระเงิน', 'ยืนยันว่าระบบ OM ดำเนินการครบถ้วน', 'Helpdesk', 2, '11'),
+    makeStep('close-task', 'lane-helpdesk', 1, 950, 'task', 'ปิด Task งาน', 'สรุปผลและปิดงานในระบบ', 'Helpdesk', 1, '12'),
+    makeStep('end', 'lane-helpdesk', 1, 1090, 'end', 'END', 'งานเปิดบริการเสร็จสมบูรณ์', 'Helpdesk'),
   ];
 
-  const links: Array<[string, string]> = [
+  const links: Array<[string, string, string?]> = [
     ['start', 'request-form'],
     ['request-form', 'om-register'],
-    ['om-register', 'helpdesk-form'],
-    ['helpdesk-form', 'support-create-vm'],
+    ['om-register', 'helpdesk-check-docs', 'ส่งข้อมูลไปที่ ntcloud@ntplc.co.th'],
+    ['helpdesk-check-docs', 'helpdesk-form'],
+    ['helpdesk-form', 'support-create-vm', 'แจ้งเปิดงานผ่าน support_cloud@ntplc.cloud'],
     ['support-create-vm', 'send-credential'],
     ['send-credential', 'support-reply'],
     ['support-reply', 'helpdesk-check'],
     ['helpdesk-check', 'helpdesk-reply'],
-    ['helpdesk-reply', 'requester-test'],
-    ['requester-test', 'helpdesk-confirm'],
+    ['helpdesk-reply', 'requester-om-billing'],
+    ['requester-om-billing', 'helpdesk-confirm'],
     ['helpdesk-confirm', 'close-task'],
     ['close-task', 'end'],
   ];
@@ -149,10 +154,11 @@ export function createTemplate(): SavedProcess {
     version: 1,
     title: 'ขั้นตอนการเปิดใช้งานบริการ NT Cloud Service',
     nodes,
-    edges: links.map(([source, target], index) => ({
+    edges: links.map(([source, target, label], index) => ({
       id: `edge-${index + 1}`,
       source,
       target,
+      label,
       markerEnd: { type: MarkerType.ArrowClosed },
     })),
   };

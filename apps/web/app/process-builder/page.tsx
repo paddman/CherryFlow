@@ -57,7 +57,10 @@ function StepCard({ data, selected }: NodeProps<StepFlowNode>) {
     <article className={`processStep processStep-${data.stepKind}${selected ? ' selected' : ''}${data.active ? ' active' : ''}${data.completed ? ' completed' : ''}`}>
       {data.stepKind !== 'start' && <Handle type="target" position={Position.Top} />}
       <div className="stepTopline">
-        <span className="stepType">{stepLabels[data.stepKind]}</span>
+        <span className="stepTypeGroup">
+          {data.referenceCode && <span className="stepReference">{data.referenceCode}</span>}
+          <span className="stepType">{stepLabels[data.stepKind]}</span>
+        </span>
         <span className={`stepStatus stepStatus-${data.status}`}>{statusLabels[data.status]}</span>
       </div>
       <strong>{data.title}</strong>
@@ -81,7 +84,7 @@ function ProcessBuilderWorkspace() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(template.edges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [activeLaneId, setActiveLaneId] = useState('lane-requester');
-  const [notice, setNotice] = useState('โหลดตัวอย่าง NT Cloud Service แล้ว');
+  const [notice, setNotice] = useState('โหลด NT Cloud Service Flow จากไฟล์ HTML ต้นฉบับแล้ว');
   const [running, setRunning] = useState(false);
   const importRef = useRef<HTMLInputElement | null>(null);
 
@@ -217,7 +220,7 @@ function ProcessBuilderWorkspace() {
     setEdges(fresh.edges);
     setSelectedNodeId(null);
     setActiveLaneId('lane-requester');
-    setNotice('คืนค่า Template NT Cloud Service แล้ว');
+    setNotice('โหลด NT Cloud Service Flow จากไฟล์ HTML ต้นฉบับแล้ว');
   }, [setEdges, setNodes]);
 
   const exportFlow = useCallback(() => {
@@ -311,7 +314,7 @@ function ProcessBuilderWorkspace() {
             <div className="processStats"><span>{lanes.length} หน่วยงาน</span><span>{steps.length} ขั้นตอน</span><span>{edges.length} เส้นเชื่อม</span><span>SLA รวม {estimatedHours} ชม.</span></div>
           </div>
           <div className="toolbarButtons">
-            <button type="button" className="ghostButton" onClick={resetTemplate}>NT Cloud Template</button>
+            <button type="button" className="ghostButton" onClick={resetTemplate}>โหลด NT Cloud Flow</button>
             <button type="button" className="ghostButton" onClick={() => importRef.current?.click()}>Import</button>
             <input ref={importRef} type="file" accept="application/json" hidden onChange={importFlow} />
             <button type="button" className="ghostButton" onClick={exportFlow}>Export</button>
@@ -368,7 +371,7 @@ function ProcessBuilderWorkspace() {
             <div className="inspectorHeader"><div><p>FLOW OVERVIEW</p><h2>ภาพรวมกระบวนการ</h2></div></div>
             <div className="overviewCards"><article><span>หน่วยงาน</span><strong>{lanes.length}</strong></article><article><span>ขั้นตอน</span><strong>{steps.length}</strong></article><article><span>การเชื่อมโยง</span><strong>{edges.length}</strong></article><article><span>SLA รวม</span><strong>{estimatedHours} ชม.</strong></article></div>
             <section className="validationPanel"><h3>Validation</h3>{validationErrors.length === 0 ? <p className="successText">✓ Flow ถูกต้องและพร้อม Run</p> : <ul>{validationErrors.slice(0, 8).map((error) => <li key={error}>{error}</li>)}</ul>}</section>
-            <section className="helpPanel"><h3>วิธีใช้งาน</h3><p>เลือก Lane แล้วเพิ่ม Component จากเมนูด้านซ้าย ลาก Node จัดตำแหน่ง และลากจากจุดเชื่อมด้านล่างไปยังขั้นตอนถัดไป</p></section>
+            <section className="helpPanel"><h3>วิธีใช้งาน</h3><p>Flow นี้แปลงจาก nt-cloud-service-flow.html เป็น task workflow แล้ว เลือก Lane เพิ่ม Component ลาก Node จัดตำแหน่ง และลากจากจุดเชื่อมด้านล่างไปยังขั้นตอนถัดไป</p></section>
           </>
         )}
       </aside>
