@@ -45,15 +45,26 @@
 
 .laneList,
 .componentList { display: grid; gap: 8px; }
-.laneListItem { display: grid; grid-template-columns: 34px minmax(0, 1fr) 26px; align-items: center; gap: 6px; padding: 6px; border: 1px solid transparent; border-radius: 11px; background: #f8fafc; }
+.laneListItem { display: grid; grid-template-columns: 34px minmax(0, 1fr) 28px 26px; align-items: center; gap: 6px; padding: 6px; border: 1px solid transparent; border-radius: 11px; background: #f8fafc; }
 .laneListItem.active { border-color: #bfdbfe; background: #eff6ff; }
 .laneSelect,
 .laneDelete { border: 0; background: transparent; cursor: pointer; }
 .laneSelect { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; }
 .laneSelect span { width: 11px; height: 11px; border-radius: 50%; box-shadow: 0 0 0 4px #94a3b822; }
 .laneListItem input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--pf-text); font: inherit; font-size: 13px; font-weight: 650; }
+.laneColorInput { width: 28px !important; height: 28px; padding: 0; border-radius: 8px; cursor: pointer; }
 .laneDelete { width: 26px; height: 26px; color: #9aa5b5; font-size: 17px; }
 .laneDelete:hover { color: #dc2626; }
+
+.configPanel { display: grid; gap: 12px; padding: 12px; border: 1px solid #e6ebf2; border-radius: 14px; background: #f8fafc; }
+.configPanel label { display: grid; gap: 5px; color: #4b5d73; font-size: 10px; font-weight: 800; }
+.configPanel input,
+.configPanel select { min-width: 0; width: 100%; height: 34px; border: 1px solid #d9e2ee; border-radius: 9px; background: #fff; color: #152238; font: inherit; font-size: 11px; }
+.configPanel input[type="checkbox"] { width: 16px; height: 16px; }
+.configPanel input[type="color"] { padding: 2px; }
+.configGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.configChecks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.configChecks label { display: flex; align-items: center; gap: 5px; font-size: 9px; }
 
 .componentList > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e6ebf2; border-radius: 12px; background: #fff; color: var(--pf-text); text-align: left; cursor: pointer; transition: .18s ease; }
 .componentList > button:hover { transform: translateY(-1px); border-color: #93c5fd; box-shadow: 0 8px 18px #1e40af14; }
@@ -84,7 +95,7 @@
 .runButton:disabled { cursor: not-allowed; opacity: .48; }
 
 .processCanvasWrap { position: relative; min-height: 0; overflow: hidden; }
-.processCanvasWrap .react-flow { background: #f7f9fc; }
+.processCanvasWrap .react-flow { background: var(--pf-canvas-bg, #f7f9fc); }
 .processCanvasWrap .react-flow__edge-path { stroke: #64748b; stroke-width: 1.8; }
 .processCanvasWrap .react-flow__edge.selected .react-flow__edge-path { stroke: #2563eb; stroke-width: 2.4; }
 .processCanvasWrap .react-flow__edge-text { fill: #475569; font-size: 11px; font-weight: 800; }
@@ -93,13 +104,17 @@
 .processCanvasWrap .react-flow__controls,
 .processCanvasWrap .react-flow__minimap { border: 1px solid #dce4ef; border-radius: 12px; overflow: hidden; background: #fffffff0; box-shadow: 0 8px 24px #0f172a14; }
 
-.processLane { width: 100%; height: 100%; overflow: hidden; border: 1px solid #cad5e3; border-radius: 15px; background: #ffffffc7; box-shadow: 0 5px 18px #0f172a0a; }
+.processLane { width: 100%; height: 100%; overflow: hidden; border: 1px solid #cad5e3; border-radius: var(--pf-lane-radius, 15px); background: #ffffffc7; box-shadow: var(--pf-step-shadow, 0 5px 18px #0f172a0a); }
 .processLane header { height: 55px; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #dce4ef; background: #f8fafc; }
 .processLane header strong { color: #1e293b; font-size: 15px; }
 .laneDot { width: 10px; height: 10px; border-radius: 50%; background: var(--lane-color); box-shadow: 0 0 0 5px #94a3b81f; }
 .laneBody { height: calc(100% - 55px); background-image: linear-gradient(to bottom, #94a3b81f 1px, transparent 1px); background-size: 100% 120px; }
 
-.processStep { width: 256px; min-height: 104px; display: grid; gap: 8px; padding: 13px 14px 12px; border: 1px solid #cfd9e7; border-radius: 13px; background: #fff; color: #162238; box-shadow: 0 7px 20px #0f172a14; transition: .15s ease; }
+.processStep { width: 256px; min-height: 104px; display: grid; gap: 8px; padding: 13px 14px 12px; border: 1px solid #cfd9e7; border-radius: 13px; background: #fff; color: #162238; box-shadow: var(--pf-step-shadow, 0 7px 20px #0f172a14); transition: .15s ease; }
+.preset-compact .processStep { width: 220px; min-height: 88px; gap: 6px; padding: 11px; }
+.preset-document .processStep { width: 286px; border-radius: 10px; }
+.preset-kanban .processStep { width: 232px; }
+.preset-timeline .processStep { width: 236px; border-radius: 999px; }
 .processStep:hover,
 .processStep.selected { border-color: #60a5fa; box-shadow: 0 10px 28px #2563eb26; }
 .processStep.active { border-color: #2563eb; transform: translateY(-2px); box-shadow: 0 0 0 4px #3b82f621, 0 14px 32px #2563eb38; }
@@ -153,13 +168,17 @@
 .overviewCards span { color: #718096; font-size: 10px; }
 .overviewCards strong { font-size: 19px; }
 .validationPanel,
-.helpPanel { margin-top: 18px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.helpPanel,
+.advancedConfigPanel { margin-top: 18px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
 .validationPanel h3,
-.helpPanel h3 { margin: 0 0 9px; font-size: 12px; }
+.helpPanel h3,
+.advancedConfigPanel h3 { margin: 0 0 9px; font-size: 12px; }
 .validationPanel ul { display: grid; gap: 7px; margin: 0; padding-left: 16px; color: #b42318; font-size: 10px; line-height: 1.45; }
 .successText { margin: 0; color: #15803d; font-size: 11px; font-weight: 700; }
 .helpPanel { background: #f8fafc; }
 .helpPanel p { margin: 0; color: #64748b; font-size: 10px; line-height: 1.6; }
+.advancedConfigPanel { display: grid; gap: 10px; }
+.advancedConfigPanel textarea { width: 100%; min-height: 180px; padding: 10px; border: 1px solid #d9e2ee; border-radius: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; line-height: 1.45; resize: vertical; }
 
 @media (max-width: 1280px) {
   .processBuilderPage { grid-template-columns: 228px minmax(560px, 1fr) 280px; }
