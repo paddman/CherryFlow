@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ขั้นตอนการเปิดใช้งานบริการ NT Cloud Service</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --panel:#ffffff;
+      --line:#cbd5e1;
+      --line-strong:#94a3b8;
+      --text:#0f172a;
+      --muted:#64748b;
+      --blue:#2563eb;
+      --blue-soft:#eff6ff;
+      --green:#059669;
+      --green-soft:#ecfdf5;
+      --orange:#ea580c;
+      --orange-soft:#fff7ed;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:14px;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#f8fafc 0%,var(--bg) 100%);
+      color:var(--text);
+      font-family:"Noto Sans Thai","Leelawadee UI",Tahoma,Arial,sans-serif;
+    }
+
+    .page{
+      max-width:1480px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
+
+    .title-wrap h1{
+      margin:0;
+      font-size:clamp(20px,2vw,30px);
+      line-height:1.25;
+    }
+
+    .title-wrap p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      border-radius:10px;
+      padding:9px 12px;
+      cursor:pointer;
+      font:inherit;
+      font-weight:700;
+    }
+
+    button:hover{border-color:var(--blue);color:var(--blue)}
+
+    .zoom-label{
+      min-width:58px;
+      text-align:center;
+      font-size:13px;
+      font-weight:800;
+      color:var(--muted);
+    }
+
+    .flow-shell{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      overflow:auto;
+      position:relative;
+    }
+
+    .flow-stage{
+      position:relative;
+      width:1200px;
+      height:860px;
+      transform-origin:top left;
+      background:#fff;
+    }
+
+    .flow-title{
+      position:absolute;
+      left:0;
+      top:0;
+      width:1200px;
+      height:58px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:19px;
+      font-weight:900;
+      border-bottom:1px solid var(--line);
+      background:#f8fafc;
+      z-index:3;
+    }
+
+    .lane-head{
+      position:absolute;
+      top:58px;
+      height:46px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:15px;
+      font-weight:900;
+      border-bottom:1px solid var(--line);
+      z-index:3;
+    }
+
+    .lane-head.requester{left:0;width:400px;background:var(--blue-soft);color:#1d4ed8}
+    .lane-head.helpdesk{left:400px;width:400px;background:var(--green-soft);color:#047857}
+    .lane-head.support{left:800px;width:400px;background:var(--orange-soft);color:#c2410c}
+
+    .lane-bg{
+      position:absolute;
+      top:104px;
+      bottom:0;
+      width:400px;
+    }
+
+    .lane-bg.requester{left:0;background:linear-gradient(180deg,rgba(239,246,255,.35),rgba(255,255,255,0))}
+    .lane-bg.helpdesk{left:400px;background:linear-gradient(180deg,rgba(236,253,245,.32),rgba(255,255,255,0))}
+    .lane-bg.support{left:800px;background:linear-gradient(180deg,rgba(255,247,237,.38),rgba(255,255,255,0))}
+
+    .divider{
+      position:absolute;
+      top:58px;
+      bottom:0;
+      width:1px;
+      background:var(--line-strong);
+      z-index:2;
+    }
+
+    .divider.d1{left:400px}
+    .divider.d2{left:800px}
+
+    .node{
+      position:absolute;
+      width:250px;
+      min-height:72px;
+      padding:14px 16px 14px 52px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:#fff;
+      box-shadow:0 7px 18px rgba(15,23,42,.07);
+      z-index:4;
+      line-height:1.45;
+    }
+
+    .node:hover{
+      transform:translateY(-2px);
+      box-shadow:0 12px 28px rgba(15,23,42,.12);
+    }
+
+    .node .num{
+      position:absolute;
+      left:14px;
+      top:15px;
+      width:26px;
+      height:26px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      font-size:12px;
+      font-weight:900;
+      color:#fff;
+    }
+
+    .node.requester .num{background:var(--blue)}
+    .node.helpdesk .num{background:var(--green)}
+    .node.support .num{background:var(--orange)}
+
+    .node strong{
+      display:block;
+      font-size:14px;
+      margin-bottom:4px;
+    }
+
+    .node span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .start,.end{
+      position:absolute;
+      width:150px;
+      height:50px;
+      display:grid;
+      place-items:center;
+      border:2px solid var(--text);
+      border-radius:999px;
+      background:#fff;
+      font-weight:900;
+      z-index:4;
+    }
+
+    .start{left:125px;top:130px}
+    .end{left:625px;top:765px}
+
+    .connector-label{
+      position:absolute;
+      z-index:5;
+      background:#fff;
+      border:1px solid var(--line);
+      color:var(--muted);
+      border-radius:999px;
+      padding:5px 9px;
+      font-size:11px;
+      white-space:nowrap;
+      box-shadow:0 4px 10px rgba(15,23,42,.05);
+    }
+
+    svg.connectors{
+      position:absolute;
+      left:0;
+      top:0;
+      width:1200px;
+      height:860px;
+      z-index:1;
+      pointer-events:none;
+    }
+
+    .legend{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      flex-wrap:wrap;
+      padding:14px 18px;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;
+      background:#f8fafc;
+      min-width:1200px;
+    }
+
+    .legend-item{display:flex;align-items:center;gap:7px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.blue{background:var(--blue)}
+    .dot.green{background:var(--green)}
+    .dot.orange{background:var(--orange)}
+
+    @media (max-width:760px){
+      .page{padding:12px}
+      .topbar{align-items:flex-start;flex-direction:column}
+      .actions{width:100%}
+      button{flex:1}
+    }
+
+    @media print{
+      body{background:#fff}
+      .page{max-width:none;padding:0}
+      .topbar{display:none}
+      .flow-shell{border:0;box-shadow:none;overflow:visible}
+      .flow-stage{transform:none!important}
+      .legend{display:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>ตัวอย่าง Process Flow: NT Cloud Service</h1>
+        <p>Swimlane แบ่งตามผู้ขอใช้งาน, Helpdesk และ Support</p>
+      </div>
+      <div class="actions">
+        <button type="button" onclick="zoomOut()">−</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+        <button type="button" onclick="zoomIn()">+</button>
+        <button type="button" onclick="resetZoom()">รีเซ็ต</button>
+        <button type="button" onclick="window.print()">พิมพ์ / PDF</button>
+      </div>
+    </div>
+
+    <section class="flow-shell" id="shell">
+      <div class="flow-stage" id="stage">
+        <div class="flow-title">ขั้นตอนการเปิดใช้งานบริการ NT Cloud Service</div>
+
+        <div class="lane-head requester">ฝ่ายงาน / ผู้ขอใช้บริการ</div>
+        <div class="lane-head helpdesk">Helpdesk</div>
+        <div class="lane-head support">Support</div>
+
+        <div class="lane-bg requester"></div>
+        <div class="lane-bg helpdesk"></div>
+        <div class="lane-bg support"></div>
+        <div class="divider d1"></div>
+        <div class="divider d2"></div>
+
+        <div class="start">START</div>
+
+        <div class="node requester" style="left:75px;top:205px">
+          <div class="num">1</div>
+          <strong>กรอกข้อมูลคำขอใช้บริการ</strong>
+          <span>กรอกแบบฟอร์ม NT Cloud Service ตามลิงก์ที่กำหนด</span>
+        </div>
+
+        <div class="node requester" style="left:75px;top:320px">
+          <div class="num">2</div>
+          <strong>ส่งเอกสารและรายละเอียด</strong>
+          <span>แนบเอกสารใบเชื่อมโยง ใบเสนอราคา และ Key เข้าสู่ระบบ OM</span>
+        </div>
+
+        <div class="node helpdesk" style="left:435px;top:320px">
+          <div class="num">3</div>
+          <strong>ตรวจสอบเอกสาร</strong>
+          <span>ตรวจสอบข้อมูลเอกสาร ใบเชื่อมโยง และใบเสนอราคา</span>
+        </div>
+
+        <div class="node helpdesk" style="left:590px;top:205px">
+          <div class="num">4</div>
+          <strong>กรอกแบบฟอร์มเปิดบริการ</strong>
+          <span>บันทึกข้อมูลในแบบฟอร์มการเปิดบริการ NT Cloud</span>
+        </div>
+
+        <div class="node support" style="left:875px;top:205px">
+          <div class="num">5</div>
+          <strong>สร้าง VM</strong>
+          <span>ดำเนินการสร้าง VM ตามข้อมูลในแบบฟอร์ม</span>
+        </div>
+
+        <div class="node support" style="left:875px;top:115px">
+          <div class="num">6</div>
+          <strong>แจ้งข้อมูลเข้าใช้งาน</strong>
+          <span>ส่ง Username และ Password ไปยังอีเมลลูกค้า</span>
+        </div>
+
+        <div class="node support" style="left:875px;top:435px">
+          <div class="num">7</div>
+          <strong>ตอบกลับผลการดำเนินงาน</strong>
+          <span>อัปเดตข้อมูลในแบบฟอร์มการเปิดบริการ NT Cloud</span>
+        </div>
+
+        <div class="node helpdesk" style="left:590px;top:435px">
+          <div class="num">8</div>
+          <strong>ตรวจสอบผลจาก Support</strong>
+          <span>ตรวจสอบความครบถ้วนของข้อมูลในแบบฟอร์ม</span>
+        </div>
+
+        <div class="node helpdesk" style="left:435px;top:550px">
+          <div class="num">9</div>
+          <strong>ตอบกลับข้อมูลให้ฝ่ายงาน</strong>
+          <span>ส่งรายละเอียดผ่านอีเมลหรือลิงก์ NT Cloud</span>
+        </div>
+
+        <div class="node requester" style="left:75px;top:550px">
+          <div class="num">10</div>
+          <strong>บันทึกรายละเอียดใน OM</strong>
+          <span>นำข้อมูลที่ได้รับไปใส่ในระบบ OM เพื่อเรียกชำระเงินลูกค้า</span>
+        </div>
+
+        <div class="node helpdesk" style="left:435px;top:665px">
+          <div class="num">11</div>
+          <strong>ตรวจสอบการเรียกชำระเงิน</strong>
+          <span>ยืนยันว่าระบบ OM ดำเนินการครบถ้วน</span>
+        </div>
+
+        <div class="node helpdesk" style="left:650px;top:665px">
+          <div class="num">12</div>
+          <strong>ปิด Task งาน</strong>
+          <span>สรุปผลและปิดงานในระบบ</span>
+        </div>
+
+        <div class="end">END</div>
+
+        <span class="connector-label" style="left:292px;top:296px">ส่งข้อมูลไปที่ ntcloud@ntplc.co.th</span>
+        <span class="connector-label" style="left:668px;top:296px">แจ้งเปิดงานผ่าน support_cloud@ntplc.cloud</span>
+
+        <svg class="connectors" viewBox="0 0 1200 860" aria-hidden="true">
+          <defs>
+            <marker id="arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+              <path d="M0,0 L9,4.5 L0,9 z" fill="#334155"></path>
+            </marker>
+          </defs>
+
+          <g fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)">
+            <path d="M200 180 L200 205"/>
+            <path d="M200 277 L200 320"/>
+            <path d="M325 356 L435 356"/>
+            <path d="M685 320 L685 277"/>
+            <path d="M840 241 L875 241"/>
+            <path d="M1000 205 L1000 187"/>
+            <path d="M1000 277 L1000 435"/>
+            <path d="M875 471 L840 471"/>
+            <path d="M590 471 L560 471 L560 550"/>
+            <path d="M435 586 L325 586"/>
+            <path d="M200 622 L200 701 L435 701"/>
+            <path d="M685 701 L650 701"/>
+            <path d="M775 737 L775 765 L700 765"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><span class="dot blue"></span>ฝ่ายงาน / ผู้ขอใช้บริการ</div>
+        <div class="legend-item"><span class="dot green"></span>Helpdesk</div>
+        <div class="legend-item"><span class="dot orange"></span>Support</div>
+        <div>หมายเหตุ: สามารถแก้ข้อความ อีเมล ขั้นตอน และตำแหน่งกล่องได้จากไฟล์ HTML โดยตรง</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let zoom = 1;
+    const stage = document.getElementById('stage');
+    const label = document.getElementById('zoomLabel');
+
+    function applyZoom(){
+      stage.style.transform = `scale(${zoom})`;
+      stage.parentElement.style.minHeight = `${860 * zoom}px`;
+      label.textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    function zoomIn(){
+      zoom = Math.min(1.4, +(zoom + 0.1).toFixed(1));
+      applyZoom();
+    }
+
+    function zoomOut(){
+      zoom = Math.max(0.6, +(zoom - 0.1).toFixed(1));
+      applyZoom();
+    }
+
+    function resetZoom(){
+      zoom = 1;
+      applyZoom();
+    }
+
+    applyZoom();
+  </script>
+</body>
+</html>

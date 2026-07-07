@@ -87,6 +87,8 @@
 .processCanvasWrap .react-flow { background: #f7f9fc; }
 .processCanvasWrap .react-flow__edge-path { stroke: #64748b; stroke-width: 1.8; }
 .processCanvasWrap .react-flow__edge.selected .react-flow__edge-path { stroke: #2563eb; stroke-width: 2.4; }
+.processCanvasWrap .react-flow__edge-text { fill: #475569; font-size: 11px; font-weight: 800; }
+.processCanvasWrap .react-flow__edge-textbg { fill: #fff; stroke: #cbd5e1; stroke-width: 1px; }
 .processCanvasWrap .react-flow__handle { width: 9px; height: 9px; border: 2px solid #fff; background: #3b82f6; }
 .processCanvasWrap .react-flow__controls,
 .processCanvasWrap .react-flow__minimap { border: 1px solid #dce4ef; border-radius: 12px; overflow: hidden; background: #fffffff0; box-shadow: 0 8px 24px #0f172a14; }
@@ -109,6 +111,8 @@
 .processStep-notification { border-color: #67e8f9; background: #f5feff; }
 .stepTopline,
 .processStep footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stepTypeGroup { min-width: 0; display: inline-flex; align-items: center; gap: 6px; }
+.stepReference { width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 999px; background: #2563eb; color: #fff; font-size: 10px; font-weight: 900; box-shadow: 0 4px 12px #2563eb30; }
 .stepType { color: #64748b; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .stepStatus { padding: 3px 7px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 8px; font-weight: 750; }
 .stepStatus-ready { background: #eff6ff; color: #1d4ed8; }
