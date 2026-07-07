@@ -30,6 +30,7 @@ export default function HomePage() {
             <a href="#features">AI Stack</a>
             <a href="#use-cases">Use Cases</a>
             <a href="#architecture">Architecture</a>
+            <Link href="/process-builder" prefetch={false}>Process Flow</Link>
             <Link className={styles.navButton} href="/builder" prefetch={false}>เปิด Builder</Link>
             <Link className={styles.navButton} href="/models" prefetch={false}>Models</Link>
           </div>
@@ -43,7 +44,7 @@ export default function HomePage() {
           <p className={styles.heroLead}>CherryFlow เชื่อม Local Qwen, OpenAI-compatible API, Workflow, Agent, Machine Learning และ Deep Learning Worker ให้ทำงานร่วมกัน พร้อมเปิดใช้งานเป็น API หรือเว็บไซต์</p>
           <div className={styles.heroActions}>
             <Link className={styles.primaryButton} href="/builder" prefetch={false}>เปิด Local AI Builder →</Link>
-            <a className={styles.secondaryButton} href="#architecture">ดู Architecture</a>
+            <Link className={styles.secondaryButton} href="/process-builder" prefetch={false}>สร้าง Process Flow</Link>
           </div>
           <div className={styles.trustRow}>
             <span className={styles.trustItem}><span className={styles.check}>✓</span> Qwen ผ่าน Local API</span>
@@ -119,7 +120,7 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><Link href="/models" prefetch={false}>Models</Link><a href="#features">AI Stack</a></div></div>
+        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><Link href="/process-builder" prefetch={false}>Process Flow</Link><Link href="/models" prefetch={false}>Models</Link><a href="#features">AI Stack</a></div></div>
       </footer>
     </main>
   );
