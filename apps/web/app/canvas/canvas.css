@@ -86,6 +86,7 @@
   z-index: 10;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 14px;
   pointer-events: none;
 }
@@ -110,6 +111,8 @@
 .toolbarActions {
   display: flex;
   align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -177,61 +180,4 @@
   border-radius: 16px;
   padding: 12px 14px;
   line-height: 1.45;
-}
-
-.configStack label {
-  display: grid;
-  gap: 8px;
-  font-weight: 800;
-}
-
-.configStack input,
-.configStack select,
-.configStack textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #cbd7ea;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font: inherit;
-  color: #12213a;
-  background: #fff;
-}
-
-.configStack textarea {
-  min-height: 180px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-}
-
-.runPanel {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  z-index: 10;
-  width: min(420px, calc(100% - 36px));
-  max-height: 40vh;
-  overflow: auto;
-}
-
-.runPanel pre {
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 10px 0 0;
-  font-size: 12px;
-}
-
-.react-flow__node {
-  border-radius: 14px;
-  border: 1px solid #bfd0ea;
-  box-shadow: 0 14px 32px rgba(21, 73, 154, 0.14);
-}
-
-@media (max-width: 1100px) {
-  .canvasPage {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-  .configPanel {
-    display: none;
-  }
 }
