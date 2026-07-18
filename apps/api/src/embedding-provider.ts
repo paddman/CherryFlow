@@ -27,7 +27,7 @@ export function foldEmbedding(input: readonly number[], dimensions = MEMORY_VECT
   const output = Array<number>(dimensions).fill(0);
   for (let index = 0; index < input.length; index += 1) {
     const value = input[index];
-    if (!Number.isFinite(value)) throw new Error("Embedding contains a non-finite value");
+    if (value === undefined || !Number.isFinite(value)) throw new Error("Embedding contains a non-finite value");
     const target = index % dimensions;
     output[target] = (output[target] ?? 0) + value;
   }
