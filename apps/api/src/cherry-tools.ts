@@ -1,3 +1,4 @@
+import { memoryEnabled, searchMemory, upsertMemory } from "./memory-store.js";
 import { CherryToolRegistry } from "./tool-registry.js";
 import { getWorkflow, listWorkflows } from "./workflows.js";
 
@@ -9,6 +10,10 @@ function requiredString(value: unknown, label: string): string {
   const result = optionalString(value);
   if (!result) throw new Error(`${label} is required`);
   return result;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 export function createCherryToolRegistry(): CherryToolRegistry {
@@ -74,6 +79,68 @@ export function createCherryToolRegistry(): CherryToolRegistry {
         const workflow = getWorkflow(workflowId);
         if (!workflow) throw new Error(`Workflow not found: ${workflowId}`);
         return { contract: workflow.contract, graph: workflow.graph };
+      },
+    })
+    .register({
+      name: "memory_search",
+      description: "Search CherryFlow long-term AI memory using pgvector similarity.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Question or text to retrieve related memory for." },
+          namespace: { type: "string", description: "Optional memory namespace, for example finance or operations." },
+          limit: { type: "number", description: "Maximum results from 1 to 50." },
+          minScore: { type: "number", description: "Minimum cosine similarity from -1 to 1." },
+        },
+        required: ["query"],
+        additionalProperties: false,
+      },
+      riskLevel: "read",
+      run: async (arguments_) => {
+        if (!memoryEnabled()) throw new Error("AI memory requires PostgreSQL with pgvector");
+        const namespace = optionalString(arguments_.namespace);
+        const limit = optionalNumber(arguments_.limit);
+        const minScore = optionalNumber(arguments_.minScore);
+        return {
+          results: await searchMemory({
+            query: requiredString(arguments_.query, "query"),
+            ...(namespace ? { namespace } : {}),
+            ...(limit === undefined ? {} : { limit }),
+            ...(minScore === undefined ? {} : { minScore }),
+          }),
+        };
+      },
+    })
+    .register({
+      name: "memory_remember",
+      description: "Store or update durable CherryFlow AI memory. This is a write action and requires approval.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          content: { type: "string", description: "Information that should be remembered." },
+          namespace: { type: "string", description: "Optional memory namespace, for example finance or operations." },
+          sourceId: { type: "string", description: "Optional stable id used to update the same memory later." },
+          metadata: { type: "object", description: "Optional JSON metadata." },
+        },
+        required: ["content"],
+        additionalProperties: false,
+      },
+      riskLevel: "write",
+      run: async (arguments_) => {
+        if (!memoryEnabled()) throw new Error("AI memory requires PostgreSQL with pgvector");
+        const namespace = optionalString(arguments_.namespace);
+        const sourceId = optionalString(arguments_.sourceId);
+        const metadata = arguments_.metadata && typeof arguments_.metadata === "object" && !Array.isArray(arguments_.metadata)
+          ? arguments_.metadata as Record<string, unknown>
+          : undefined;
+        return {
+          memory: await upsertMemory({
+            content: requiredString(arguments_.content, "content"),
+            ...(namespace ? { namespace } : {}),
+            ...(sourceId ? { sourceId } : {}),
+            ...(metadata ? { metadata } : {}),
+          }),
+        };
       },
     });
 }

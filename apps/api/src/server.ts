@@ -4,10 +4,12 @@ import { applyCors } from "./cors.js";
 import { prepareDatabase } from "./db/startup.js";
 import { fileStorageEnabled } from "./file-storage.js";
 import { send } from "./http-utils.js";
+import { memoryEnabled } from "./memory-store.js";
 import { handleModelRegistryRoutes } from "./model-registry.js";
 import { redisQueueEnabled } from "./redis-queue.js";
 import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
+import { handleMemoryRoutes } from "./routes-memory.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
 import { startRunWorker } from "./run-service.js";
@@ -28,15 +30,18 @@ async function start(): Promise<void> {
           status: "ok",
           service: "cherryflow-api",
           aiProvider: process.env.CHERRYFLOW_AI_PROVIDER ?? "local",
+          embeddingProvider: process.env.CHERRYFLOW_EMBEDDING_PROVIDER ?? (process.env.EMBEDDING_MODEL ? "openai" : "local"),
           store: (process.env.CHERRYFLOW_STORE ?? (process.env.DATABASE_URL ? "postgres" : "json")),
           runner: redisQueueEnabled() ? "redis" : "in_process",
           fileStorage: fileStorageEnabled() ? "s3" : "inline",
+          memory: memoryEnabled() ? "pgvector" : "disabled",
         });
         return;
       }
       if (await handleAuthRoutes(request, response, url.pathname)) return;
       if (!await authorizeManagementRequest(request, response, url.pathname)) return;
       if (await handleModelRegistryRoutes(request, response, url.pathname)) return;
+      if (await handleMemoryRoutes(request, response, url.pathname)) return;
       if (await handleAgentRoutes(request, response, url.pathname)) return;
       if (await handleBuilderRoutes(request, response, url.pathname)) return;
       if (await handlePublishRoutes(request, response, url.pathname)) return;
