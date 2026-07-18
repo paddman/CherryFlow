@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -108,6 +108,11 @@ function sampleInputs(workflow: WorkflowContract | null): WorkflowInputValues {
   return Object.fromEntries((workflow?.inputs ?? []).map((field) => [field.name, sampleValue(field)]));
 }
 
+function flowFileName(name: string): string {
+  const safeName = name.trim().replace(/[^a-z0-9ก-๙]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  return `${safeName || 'cherryflow-flow'}.cherryflow.json`;
+}
+
 function CanvasWorkspace() {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -119,6 +124,7 @@ function CanvasWorkspace() {
   const [notice, setNotice] = useState('กำลังโหลด Canvas...');
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [busy, setBusy] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
   const validationText = useMemo(() => {
@@ -143,19 +149,24 @@ function CanvasWorkspace() {
     return { nodes: canvasNodes, edges: canvasEdges, outputNodeId: outputNodeId || canvasNodes.at(-1)?.id };
   }, [edges, nodes, outputNodeId]);
 
+  const applyCanvasResult = useCallback((result: CanvasResponse) => {
+    setModules(result.modules);
+    setNodes(result.canvas.nodes.map(toFlowNode));
+    setEdges(result.canvas.edges.map(toFlowEdge));
+    setOutputNodeId(result.canvas.graph.outputNodeId);
+    setValidation(result.validation);
+    setSelectedNode(null);
+  }, [setEdges, setNodes]);
+
   const loadCanvas = useCallback(async () => {
     const [canvasResult, workflowResult] = await Promise.all([
       requestJson<CanvasResponse>(`/api/workflows/${workflowId}/canvas`),
       requestJson<WorkflowContract>(`/api/workflows/${workflowId}`),
     ]);
     setWorkflow(workflowResult);
-    setModules(canvasResult.modules);
-    setNodes(canvasResult.canvas.nodes.map(toFlowNode));
-    setEdges(canvasResult.canvas.edges.map(toFlowEdge));
-    setOutputNodeId(canvasResult.canvas.graph.outputNodeId);
-    setValidation(canvasResult.validation);
+    applyCanvasResult(canvasResult);
     setNotice(`โหลด Canvas แล้ว · อัปเดตล่าสุด ${new Date(canvasResult.canvas.updatedAt).toLocaleString('th-TH')}`);
-  }, [setEdges, setNodes]);
+  }, [applyCanvasResult]);
 
   useEffect(() => {
     loadCanvas().catch((error: unknown) => setNotice(error instanceof Error ? error.message : 'โหลด Canvas ไม่สำเร็จ'));
@@ -236,6 +247,52 @@ function CanvasWorkspace() {
     }
   }, [makeCanvasPayload]);
 
+  const exportFlow = useCallback(() => {
+    try {
+      const flowPackage = {
+        format: 'cherryflow.flow',
+        formatVersion: 1,
+        exportedAt: new Date().toISOString(),
+        workflow: {
+          id: workflowId,
+          name: workflow?.name ?? 'CherryFlow Workflow',
+        },
+        canvas: makeCanvasPayload(),
+      };
+      const blob = new Blob([JSON.stringify(flowPackage, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = flowFileName(workflow?.name ?? workflowId);
+      link.click();
+      URL.revokeObjectURL(url);
+      setNotice('Export Flow เป็นไฟล์ .json แล้ว');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Export Flow ไม่สำเร็จ');
+    }
+  }, [makeCanvasPayload, workflow?.name]);
+
+  const importFlow = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      const result = await requestJson<CanvasResponse>(`/api/workflows/${workflowId}/canvas/import`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+      applyCanvasResult(result);
+      setNotice(`Import ${file.name} สำเร็จ · validate และบันทึกฐานข้อมูลแล้ว`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Import Flow ไม่สำเร็จ');
+    } finally {
+      setBusy(false);
+    }
+  }, [applyCanvasResult]);
+
   const validate = useCallback(async () => {
     try {
       const result = await requestJson<CanvasResponse>(`/api/workflows/${workflowId}/canvas/validate`, {
@@ -286,6 +343,9 @@ function CanvasWorkspace() {
             <span className={`statusPill ${validation?.valid ? 'valid' : validation ? 'invalid' : ''}`}>{validationText}</span>
           </section>
           <div className="toolbarActions">
+            <button type="button" className="secondaryButton" onClick={() => importInputRef.current?.click()} disabled={busy}>Import JSON</button>
+            <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={importFlow} />
+            <button type="button" className="secondaryButton" onClick={exportFlow} disabled={busy}>Export JSON</button>
             <button type="button" className="secondaryButton" onClick={validate} disabled={busy}>Validate</button>
             <button type="button" className="primaryButton" onClick={save} disabled={busy}>Save</button>
             <button type="button" className="primaryButton" onClick={runCanvas} disabled={busy || !validation?.valid}>Run</button>
