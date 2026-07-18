@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { validateWorkflowGraph, type WorkflowGraph } from "@cherryflow/workflow-engine";
 import type { UiSchema, WorkflowInputValues } from "@cherryflow/ui-schema";
 import { validateUiSchema } from "@cherryflow/ui-schema";
+import { createFlowPackage, normalizeCanvasImport } from "./flow-package.js";
 import { matchWorkflow, readJson, send } from "./http-utils.js";
 import { moduleRegistry } from "./module-registry.js";
 import { planUiSchema } from "./planner.js";
@@ -64,6 +65,34 @@ export async function handleBuilderRoutes(request: IncomingMessage, response: Se
     const definition = getWorkflow(decodeURIComponent(graphGet[1] ?? ""));
     if (!definition) send(response, 404, { error: "Workflow not found" });
     else send(response, 200, { graph: definition.graph, validation: validateWorkflowGraph(definition.graph, moduleRegistry) });
+    return true;
+  }
+
+  const canvasExport = matchWorkflow(pathname, "/canvas/export");
+  if (request.method === "GET" && canvasExport) {
+    const workflowId = decodeURIComponent(canvasExport[1] ?? "");
+    const definition = getWorkflow(workflowId);
+    if (!definition) send(response, 404, { error: "Workflow not found" });
+    else {
+      const current = await getCanvas(workflowId) ?? canvasFromGraph(workflowId, definition.graph);
+      response.setHeader("content-disposition", `attachment; filename="${workflowId}.cherryflow.json"`);
+      send(response, 200, createFlowPackage(current, definition.contract.name));
+    }
+    return true;
+  }
+
+  const canvasImport = matchWorkflow(pathname, "/canvas/import");
+  if (request.method === "POST" && canvasImport) {
+    const workflowId = decodeURIComponent(canvasImport[1] ?? "");
+    const definition = getWorkflow(workflowId);
+    if (!definition) send(response, 404, { error: "Workflow not found" });
+    else {
+      const imported = normalizeCanvasImport(await readJson<unknown>(request));
+      const next = graphFromCanvas(workflowId, imported.nodes, imported.edges, imported.outputNodeId);
+      const validation = validateWorkflowGraph(next.graph, moduleRegistry);
+      if (!validation.valid) send(response, 422, { error: "Imported workflow graph is invalid", validation });
+      else send(response, 200, { ...canvasPayload(await saveCanvas(next)), imported: true });
+    }
     return true;
   }
 
