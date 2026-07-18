@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Pool, PoolClient } from "pg";
 
@@ -74,7 +75,7 @@ export async function loadMigrations(directory = DEFAULT_MIGRATION_DIRECTORY): P
 
   for (const entry of entries) {
     if (!entry.isFile() || !entry.name.endsWith(".sql")) continue;
-    const content = await readFile(new URL(entry.name, `file://${directory.replace(/\\/g, "/")}/`), "utf8");
+    const content = await readFile(resolve(directory, entry.name), "utf8");
     migrations.push(parseMigrationSql(entry.name, content));
   }
 
