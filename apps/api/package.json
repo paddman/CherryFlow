@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
+    "db:migrate": "tsx src/db/migration-cli.ts up",
+    "db:status": "tsx src/db/migration-cli.ts status",
+    "db:check": "tsx src/db/migration-cli.ts check",
     "test": "tsx --test src/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc --noEmit -p tsconfig.json"

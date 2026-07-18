@@ -8,6 +8,9 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
+    "db:migrate": "pnpm --filter @cherryflow/api db:migrate",
+    "db:status": "pnpm --filter @cherryflow/api db:status",
+    "db:check": "pnpm --filter @cherryflow/api db:check",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "engines": {
