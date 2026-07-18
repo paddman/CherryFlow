@@ -131,7 +131,7 @@ export function createCherryToolRegistry(): CherryToolRegistry {
         const namespace = optionalString(arguments_.namespace);
         const sourceId = optionalString(arguments_.sourceId);
         const metadata = arguments_.metadata && typeof arguments_.metadata === "object" && !Array.isArray(arguments_.metadata)
-          ? arguments_.metadata
+          ? arguments_.metadata as Record<string, unknown>
           : undefined;
         return {
           memory: await upsertMemory({
