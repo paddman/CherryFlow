@@ -1,245 +1,69 @@
 .builderFlowPanel {
-  min-height: calc(100vh - 128px);
+  min-height: calc(100vh - 214px);
   overflow: hidden;
-  border: 1px solid #d7e2ef;
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(32,72,126,.1);
-}
-
-.builderFlowEmpty {
-  display: grid;
-  place-items: center;
-  color: #718198;
-}
-
-.builderFlowHeader {
-  min-height: 92px;
-  padding: 20px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-bottom: 1px solid #dce5f2;
-  background: rgba(255,255,255,.95);
-}
-
-.builderFlowHeader h2 {
-  margin: 0 0 7px;
-  font-size: 24px;
-}
-
-.builderFlowHeader .sectionLabel {
-  margin-bottom: 5px;
-}
-
-.builderGraphValid,
-.builderGraphInvalid {
-  display: inline-flex;
-  padding: 6px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.builderGraphValid {
-  background: #e9f8ef;
-  color: #17643b;
-}
-
-.builderGraphInvalid {
-  background: #fff0f0;
-  color: #a22929;
-}
-
-.builderFlowCanvas {
-  position: relative;
-  height: calc(100vh - 249px);
-  min-height: 560px;
-  background: linear-gradient(180deg,#f8fbff,#eef5ff);
-}
-
-.builderFlowCanvas .react-flow__edge-path {
-  stroke: #6c91c4;
-  stroke-width: 2.2;
-}
-
-.builderFlowCanvas .react-flow__arrowhead polyline {
-  stroke: #6c91c4;
-  fill: #6c91c4;
-}
-
-.builderFlowCanvas .react-flow__minimap {
-  overflow: hidden;
-  border: 1px solid #d7e2ef;
-  border-radius: 14px;
-  background: rgba(255,255,255,.94);
-}
-
-.builderFlowCanvas .react-flow__controls {
-  overflow: hidden;
-  border: 1px solid #d7e2ef;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(32,72,126,.12);
-}
-
-.builderFlowNode {
-  position: relative;
-  width: 218px;
-  min-height: 108px;
-  box-sizing: border-box;
-  display: grid;
-  align-content: center;
-  gap: 7px;
-  padding: 17px 18px;
-  border: 1px solid #cbd9ea;
+  border: 1px solid var(--builder-border, #dfe4ec);
   border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 16px 38px rgba(35,68,115,.13);
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  background: var(--builder-card, #fff);
+  color: var(--builder-text, #111827);
+  box-shadow: var(--cf-shadow-sm, 0 8px 24px rgba(15,23,42,.06));
 }
-
-.builderFlowNode:hover,
-.builderFlowNode.selected {
-  transform: translateY(-2px);
-  border-color: #1769e0;
-  box-shadow: 0 20px 44px rgba(23,105,224,.18);
-}
-
-.builderFlowNode-input {
-  border-top: 4px solid #2a8b57;
-}
-
-.builderFlowNode-module {
-  border-top: 4px solid #1769e0;
-}
-
-.builderFlowNode-output {
-  border-top: 4px solid #7256c8;
-}
-
-.builderFlowNodeRole {
-  justify-self: start;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: #edf3fb;
-  color: #526987;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-}
-
-.builderFlowNode strong {
-  color: #152942;
-  font-size: 16px;
-  overflow-wrap: anywhere;
-}
-
-.builderFlowNode small {
-  color: #6a7d96;
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-
-.builderFlowNode em {
-  justify-self: start;
-  color: #7256c8;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.builderFlowNode .react-flow__handle {
-  width: 10px;
-  height: 10px;
-  border: 2px solid #fff;
-  background: #1769e0;
-  box-shadow: 0 0 0 1px #1769e0;
-}
-
-.builderFlowInspector {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 6;
-  width: min(310px,calc(100% - 36px));
-  box-sizing: border-box;
-  padding: 18px;
-  border: 1px solid #d5e1ef;
-  border-radius: 18px;
-  background: rgba(255,255,255,.97);
-  box-shadow: 0 24px 70px rgba(25,58,104,.2);
-}
-
-.builderFlowInspector > button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 9px;
-  background: #edf3fb;
-  color: #234b7c;
-  font-size: 20px;
-}
-
-.builderFlowInspector h3 {
-  margin: 0 36px 8px 0;
-  color: #172b46;
-}
-
-.builderFlowInspector code {
-  display: inline-flex;
-  margin-bottom: 15px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  background: #edf3fb;
-  color: #31577f;
-  font-size: 11px;
-}
-
-.builderFlowInspector > span {
-  display: block;
-  margin-bottom: 7px;
-  color: #66788f;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.builderFlowInspector pre {
-  max-height: 270px;
-  margin: 0;
-  overflow: auto;
-  padding: 12px;
-  border-radius: 12px;
-  background: #0d1728;
-  color: #dce8ff;
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-@media (max-width: 680px) {
-  .builderFlowHeader {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .builderFlowCanvas {
-    height: 650px;
-    min-height: 650px;
-  }
-
-  .builderFlowNode {
-    width: 190px;
-  }
-
-  .builderFlowInspector {
-    top: auto;
-    bottom: 18px;
-  }
-}
+.builderFlowEmpty { display: grid; place-items: center; align-content: center; gap: 8px; color: var(--builder-muted, #64748b); text-align: center; }
+.builderFlowEmpty h2, .builderFlowEmpty p { margin: 0; }
+.builderFlowEmptyIcon { width: 58px; height: 58px; display: grid; place-items: center; margin-bottom: 8px; border-radius: 18px; background: rgba(37,99,235,.10); color: #2563eb; font-size: 28px; }
+.builderFlowHeader { min-height: 112px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--builder-border, #dfe4ec); background: color-mix(in srgb, var(--builder-card, #fff) 94%, transparent); }
+.builderFlowTitle { min-width: 0; }
+.builderFlowTitle > div { display: flex; align-items: center; gap: 10px; }
+.builderFlowTitle h2 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+.builderFlowTitle > p:last-child { max-width: 620px; margin: 8px 0 0; color: var(--builder-muted, #64748b); font-size: 11px; line-height: 1.5; }
+.builderGraphValid, .builderGraphInvalid { display: inline-flex; align-items: center; gap: 6px; min-height: 25px; padding: 4px 8px; border-radius: 999px; font-size: 9px; font-weight: 900; }
+.builderGraphValid { background: rgba(22,163,74,.09); color: #16a34a; }
+.builderGraphInvalid { background: rgba(220,38,38,.09); color: #dc2626; }
+.builderGraphValid i, .builderGraphInvalid i { width: 7px; height: 7px; border-radius: 999px; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 12%, transparent); }
+.builderFlowHeaderActions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.builderFlowStats { display: grid; grid-template-columns: repeat(3, auto); align-items: center; overflow: hidden; border: 1px solid var(--builder-border, #dfe4ec); border-radius: 10px; background: var(--builder-card-subtle, #f8fafc); }
+.builderFlowStats span { min-width: 74px; padding: 8px 10px; display: grid; gap: 1px; color: var(--builder-muted, #64748b); font-size: 8px; text-align: center; }
+.builderFlowStats span + span { border-left: 1px solid var(--builder-border, #dfe4ec); }
+.builderFlowStats strong { color: var(--builder-text, #111827); font-size: 12px; }
+.builderFlowIssues { position: relative; padding: 13px 48px 13px 18px; display: grid; grid-template-columns: minmax(180px, .7fr) 1.3fr; gap: 18px; border-bottom: 1px solid rgba(220,38,38,.16); background: rgba(220,38,38,.07); }
+.builderFlowIssues > div { display: grid; align-content: start; gap: 4px; }
+.builderFlowIssues strong { color: #dc2626; font-size: 11px; }
+.builderFlowIssues span { color: var(--builder-muted, #64748b); font-size: 10px; }
+.builderFlowIssues ol { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: #dc2626; font-size: 10px; }
+.builderFlowIssues > button { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: #dc2626; font-size: 18px; }
+.builderFlowCanvas { position: relative; height: calc(100vh - 326px); min-height: 560px; background: radial-gradient(circle at 50% 0%, rgba(37,99,235,.07), transparent 32%), var(--builder-workspace, #f4f6fb); }
+.builderFlowCanvas .react-flow__edge-path { stroke: #6b87b1; stroke-width: 2; }
+.builderFlowCanvas .react-flow__arrowhead polyline { stroke: #6b87b1; fill: #6b87b1; }
+.builderFlowCanvas .react-flow__minimap { overflow: hidden; border: 1px solid var(--builder-border, #dfe4ec); border-radius: 12px; background: color-mix(in srgb, var(--builder-card, #fff) 94%, transparent); box-shadow: 0 10px 26px rgba(15,23,42,.08); }
+.builderFlowCanvas .react-flow__controls { overflow: hidden; border: 1px solid var(--builder-border, #dfe4ec); border-radius: 10px; background: var(--builder-card, #fff); box-shadow: 0 10px 26px rgba(15,23,42,.09); }
+.builderFlowCanvas .react-flow__controls button { border-bottom-color: var(--builder-border, #dfe4ec); background: var(--builder-card, #fff); color: var(--builder-text, #111827); fill: currentColor; }
+.builderFlowCanvasHint { display: inline-flex; align-items: center; gap: 6px; margin: 12px; padding: 7px 9px; border: 1px solid var(--builder-border, #dfe4ec); border-radius: 9px; background: color-mix(in srgb, var(--builder-card, #fff) 92%, transparent); color: var(--builder-muted, #64748b); font-size: 9px; box-shadow: 0 8px 20px rgba(15,23,42,.06); }
+.builderFlowNode { position: relative; width: 232px; min-height: 126px; box-sizing: border-box; display: grid; align-content: center; gap: 7px; padding: 15px 16px; border: 1px solid var(--builder-border, #cbd9ea); border-radius: 16px; background: var(--builder-card, #fff); color: var(--builder-text, #111827); box-shadow: 0 15px 36px rgba(15,23,42,.11); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.builderFlowNode::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 0 999px 999px 0; background: #2563eb; }
+.builderFlowNode:hover, .builderFlowNode.selected { transform: translateY(-2px); border-color: #2563eb; box-shadow: 0 20px 46px rgba(37,99,235,.17); }
+.builderFlowNode-input::before { background: #16a34a; }
+.builderFlowNode-output::before { background: #e11d48; }
+.builderFlowNodeTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.builderFlowNodeIcon { width: 31px; height: 31px; flex: 0 0 31px; display: grid; place-items: center; border-radius: 10px; background: rgba(37,99,235,.10); color: #2563eb; font: 900 8px/1 ui-monospace, monospace; }
+.builderFlowNode-input .builderFlowNodeIcon { background: rgba(22,163,74,.10); color: #16a34a; }
+.builderFlowNode-output .builderFlowNodeIcon { background: rgba(225,29,72,.10); color: #e11d48; }
+.builderFlowNodeRole { padding: 4px 7px; border-radius: 999px; background: var(--builder-card-subtle, #f1f5f9); color: var(--builder-muted, #64748b); font-size: 8px; font-weight: 900; letter-spacing: .10em; text-transform: uppercase; }
+.builderFlowNode > strong { color: var(--builder-text, #111827); font-size: 14px; overflow-wrap: anywhere; }
+.builderFlowNode > small { color: var(--builder-muted, #64748b); font: 650 9px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
+.builderFlowNodeMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 7px; border-top: 1px solid var(--builder-border, #dfe4ec); color: var(--builder-muted, #64748b); font-size: 8px; }
+.builderFlowNodeMeta em { color: #e11d48; font-style: normal; font-weight: 900; text-transform: uppercase; }
+.builderFlowNode .react-flow__handle { width: 10px; height: 10px; border: 2px solid var(--builder-card, #fff); background: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+.builderFlowInspector { position: absolute; top: 16px; right: 16px; z-index: 6; width: min(330px,calc(100% - 32px)); box-sizing: border-box; padding: 17px; border: 1px solid var(--builder-border, #d5e1ef); border-radius: 16px; background: color-mix(in srgb, var(--builder-card, #fff) 97%, transparent); color: var(--builder-text, #111827); backdrop-filter: blur(18px); box-shadow: 0 24px 70px rgba(15,23,42,.20); }
+.builderFlowInspector > button { position: absolute; top: 10px; right: 10px; width: 29px; height: 29px; border: 0; border-radius: 8px; background: var(--builder-card-subtle, #f1f5f9); color: var(--builder-muted, #64748b); font-size: 18px; }
+.builderFlowInspectorHeader { display: flex; align-items: center; gap: 11px; padding-right: 34px; }
+.builderFlowInspector h3 { margin: 0; font-size: 17px; overflow-wrap: anywhere; }
+.builderFlowInspector > code { display: inline-flex; margin: 13px 0; padding: 5px 8px; border-radius: 8px; background: var(--builder-card-subtle, #edf3fb); color: #2563eb; font-size: 9px; }
+.builderFlowInspector dl { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin: 0 0 14px; }
+.builderFlowInspector dl div { padding: 9px; border-radius: 9px; background: var(--builder-card-subtle, #f8fafc); }
+.builderFlowInspector dt { color: var(--builder-muted, #64748b); font-size: 7px; text-transform: uppercase; }
+.builderFlowInspector dd { margin: 3px 0 0; font: 800 9px/1.3 ui-monospace, monospace; }
+.builderFlowConfigHeader { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.builderFlowConfigHeader span { color: var(--builder-muted, #64748b); font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.builderFlowConfigHeader small { color: var(--builder-muted, #64748b); font-size: 8px; }
+.builderFlowInspector pre { max-height: 270px; margin: 0; overflow: auto; padding: 12px; border-radius: 11px; background: #080d18; color: #dbeafe; font: 10px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
+@media (max-width: 1100px) { .builderFlowHeader { align-items: flex-start; flex-direction: column; } .builderFlowHeaderActions { width: 100%; justify-content: flex-start; flex-wrap: wrap; } .builderFlowCanvas { height: 650px; } }
+@media (max-width: 680px) { .builderFlowHeader { padding: 15px; } .builderFlowTitle > div { align-items: flex-start; flex-direction: column; } .builderFlowStats { width: 100%; } .builderFlowStats span { min-width: 0; } .builderFlowHeaderActions > .primaryButton, .builderFlowHeaderActions > .secondaryButton { flex: 1; } .builderFlowIssues { grid-template-columns: 1fr; } .builderFlowCanvas { height: 650px; min-height: 650px; } .builderFlowNode { width: 205px; } .builderFlowInspector { top: auto; bottom: 14px; right: 14px; width: calc(100% - 28px); } .builderFlowCanvasHint { display: none; } }
