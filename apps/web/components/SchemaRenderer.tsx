@@ -61,7 +61,7 @@ function formatStepTime(value: string): string {
 function RunFlow({ run }: { run: WorkflowRun }) {
   const steps = run.steps ?? [];
   return (
-    <div className="runFlow">
+    <div className="runFlow" aria-live="polite" aria-busy={run.status === "queued" || run.status === "running"}>
       <div className="runFlowHeader">
         <div>
           <span>CherryFlow execution</span>
@@ -81,7 +81,7 @@ function RunFlow({ run }: { run: WorkflowRun }) {
                 {step.error && <p>{step.error}</p>}
               </div>
               <em>{step.status}</em>
-              <time>{formatStepTime(step.at)}</time>
+              <time dateTime={step.at}>{formatStepTime(step.at)}</time>
             </li>
           ))}
         </ol>
@@ -103,6 +103,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const hasProgressComponent = useMemo(() => schema.page.components.some((component) => component.type === "job-progress"), [schema.page.components]);
+  const formComponentId = useMemo(() => schema.page.components.find((component) => component.type === "workflow-form")?.id, [schema.page.components]);
 
   const style = useMemo(() => ({
     "--cf-primary": schema.theme.primaryColor,
@@ -143,7 +144,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
   }
 
   return (
-    <main className={`schemaRuntime layout-${schema.page.layout} ${publicMode ? "publicMode" : "previewMode"}`} style={style}>
+    <main id="top" className={`schemaRuntime layout-${schema.page.layout} ${publicMode ? "publicMode" : "previewMode"}`} style={style} aria-busy={submitting}>
       <div className="runtimeCanvas">
         {schema.page.components.map((component) => {
           if (component.type === "workflow-form") return (
@@ -155,7 +156,7 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
                 return field ? <RuntimeField key={name} field={field} value={values[name]} onChange={(value) => setValues((current) => ({ ...current, [name]: value }))} /> : null;
               })}</div>
               <button className="primaryButton" type="button" onClick={submit} disabled={submitting}>{submitting ? "กำลังประมวลผล..." : component.submitLabel}</button>
-              {error && <p className="errorMessage">{error}</p>}
+              {error && <p className="errorMessage" role="alert">{error}</p>}
             </section>
           );
 
@@ -170,16 +171,16 @@ export function SchemaRenderer({ schema, workflow, runPath, publicMode = false }
           );
 
           if (component.type === "workflow-output") return (
-            <section id={component.id} className="contentCard outputCard" key={component.id}><h2>{component.title ?? "ผลลัพธ์"}</h2>
+            <section id={component.id} className="contentCard outputCard" key={component.id} aria-live="polite"><h2>{component.title ?? "ผลลัพธ์"}</h2>
               {!run?.outputs && <p className="muted">{component.emptyText ?? "ยังไม่มีผลลัพธ์"}</p>}
               {run && !hasProgressComponent && <RunFlow run={run} />}
               {isFileOutput(run?.outputs?.reportFile) && <PrimaryDownload file={run.outputs.reportFile} />}
               {bindingsForComponent(component.bindings, workflow).map((binding) => { const output = workflow.outputs.find((item) => item.name === binding); return output && run?.outputs ? <article className={`outputBlock output-${binding}`} key={binding}><h3>{output.label}</h3><RuntimeOutput value={run.outputs[binding]} /></article> : null; })}
-              {run?.status === "failed" && <p className="errorMessage">{run.error}</p>}
+              {run?.status === "failed" && <p className="errorMessage" role="alert">{run.error}</p>}
             </section>
           );
 
-          return <StaticSection key={component.id} component={component} />;
+          return <StaticSection key={component.id} component={component} ctaTarget={formComponentId} />;
         })}
       </div>
     </main>
