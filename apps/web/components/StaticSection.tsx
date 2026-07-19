@@ -1,6 +1,6 @@
 import type { UiComponent } from "@cherryflow/ui-schema";
 
-export function StaticSection({ component, ctaTarget }: { component: UiComponent; ctaTarget?: string }) {
+export function StaticSection({ component, ctaTarget }: { component: UiComponent; ctaTarget?: string | undefined }) {
   if (component.type === "navbar") {
     return (
       <nav id={component.id} className="siteNavbar" aria-label="Primary navigation">
