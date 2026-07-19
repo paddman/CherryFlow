@@ -77,7 +77,7 @@ function toFlowNode(node: CanvasNode): WorkflowNode {
 }
 
 function toFlowEdge(edge: CanvasEdge): Edge {
-  return { id: edge.id, source: edge.from, target: edge.to, animated: true };
+  return { id: edge.id, source: edge.from, target: edge.to, animated: true, type: 'smoothstep' };
 }
 
 function parseConfig(text: string): Record<string, unknown> {
@@ -128,9 +128,9 @@ function CanvasWorkspace() {
   const { screenToFlowPosition } = useReactFlow();
 
   const validationText = useMemo(() => {
-    if (!validation) return 'ยังไม่ validate';
+    if (!validation) return 'Not validated';
     if (validation.valid) return `Graph valid · ${validation.order.length} nodes`;
-    return validation.errors.join(' · ');
+    return `${validation.errors.length} validation issues`;
   }, [validation]);
 
   const makeCanvasPayload = useCallback(() => {
@@ -165,7 +165,7 @@ function CanvasWorkspace() {
     ]);
     setWorkflow(workflowResult);
     applyCanvasResult(canvasResult);
-    setNotice(`โหลด Canvas แล้ว · อัปเดตล่าสุด ${new Date(canvasResult.canvas.updatedAt).toLocaleString('th-TH')}`);
+    setNotice(`Canvas loaded · ${new Date(canvasResult.canvas.updatedAt).toLocaleString('th-TH')}`);
   }, [applyCanvasResult]);
 
   useEffect(() => {
@@ -173,7 +173,7 @@ function CanvasWorkspace() {
   }, [loadCanvas]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((currentEdges) => addEdge({ ...params, animated: true }, currentEdges)),
+    (params: Connection) => setEdges((currentEdges) => addEdge({ ...params, animated: true, type: 'smoothstep' }, currentEdges)),
     [setEdges],
   );
 
@@ -193,6 +193,7 @@ function CanvasWorkspace() {
       setNodes((currentNodes) => [...currentNodes, newNode]);
       setSelectedNode(newNode);
       setOutputNodeId((current) => current || id);
+      setNotice(`Added ${label}`);
     },
     [setNodes],
   );
@@ -227,6 +228,7 @@ function CanvasWorkspace() {
     setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     setSelectedNode(null);
     setOutputNodeId((current) => current === nodeId ? '' : current);
+    setNotice(`Deleted node ${nodeId}`);
   }, [setEdges, setNodes]);
 
   const save = useCallback(async () => {
@@ -239,7 +241,7 @@ function CanvasWorkspace() {
       });
       setValidation(result.validation);
       setOutputNodeId(result.canvas.graph.outputNodeId);
-      setNotice(result.validation.valid ? 'Save สำเร็จ · Graph valid' : `Save สำเร็จ แต่ graph ยังมีปัญหา: ${result.validation.errors.join(', ')}`);
+      setNotice(result.validation.valid ? 'Saved · Graph valid' : `Saved with ${result.validation.errors.length} validation issues`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Save ไม่สำเร็จ');
     } finally {
@@ -266,7 +268,7 @@ function CanvasWorkspace() {
       link.download = flowFileName(workflow?.name ?? workflowId);
       link.click();
       URL.revokeObjectURL(url);
-      setNotice('Export Flow เป็นไฟล์ .json แล้ว');
+      setNotice('Exported CherryFlow JSON package');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Export Flow ไม่สำเร็จ');
     }
@@ -285,7 +287,7 @@ function CanvasWorkspace() {
         body: JSON.stringify(parsed),
       });
       applyCanvasResult(result);
-      setNotice(`Import ${file.name} สำเร็จ · validate และบันทึกฐานข้อมูลแล้ว`);
+      setNotice(`Imported ${file.name} · validated and saved`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Import Flow ไม่สำเร็จ');
     } finally {
@@ -294,6 +296,7 @@ function CanvasWorkspace() {
   }, [applyCanvasResult]);
 
   const validate = useCallback(async () => {
+    setBusy(true);
     try {
       const result = await requestJson<CanvasResponse>(`/api/workflows/${workflowId}/canvas/validate`, {
         method: 'POST',
@@ -301,9 +304,11 @@ function CanvasWorkspace() {
         body: JSON.stringify(makeCanvasPayload()),
       });
       setValidation(result.validation);
-      setNotice(result.validation.valid ? 'Graph valid' : result.validation.errors.join(' · '));
+      setNotice(result.validation.valid ? 'Graph validation passed' : `${result.validation.errors.length} validation issues found`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Validate ไม่สำเร็จ');
+    } finally {
+      setBusy(false);
     }
   }, [makeCanvasPayload]);
 
@@ -323,7 +328,7 @@ function CanvasWorkspace() {
         setRun(current.run);
         if (current.run.status === 'completed' || current.run.status === 'failed') break;
       }
-      setNotice('Run เสร็จแล้ว ดูผลที่มุมขวาล่าง');
+      setNotice('Run finished · inspect the result panel');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Run ไม่สำเร็จ');
     } finally {
@@ -331,24 +336,61 @@ function CanvasWorkspace() {
     }
   }, [makeCanvasPayload, workflow]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (!busy) void save();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        if (!busy && validation?.valid) void runCanvas();
+      }
+      if (event.key === 'Escape') setSelectedNode(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [busy, runCanvas, save, validation?.valid]);
+
   return (
-    <div className="canvasPage">
+    <div className="canvasPage" data-busy={busy ? 'true' : 'false'}>
       <Sidebar modules={modules} onAddNode={addNode} />
 
-      <main className="canvasStage" onDrop={onDrop} onDragOver={(event) => event.preventDefault()}>
+      <main className="canvasStage" onDrop={onDrop} onDragOver={(event) => event.preventDefault()} aria-busy={busy}>
         <div className="canvasToolbar">
-          <section className="toolbarCard">
-            <p className="eyebrow">CherryFlow Canvas</p>
-            <h1>{workflow?.name ?? 'Workflow Canvas'}</h1>
-            <span className={`statusPill ${validation?.valid ? 'valid' : validation ? 'invalid' : ''}`}>{validationText}</span>
+          <section className="toolbarCard canvasTitleCard">
+            <div className="canvasBreadcrumb"><a href="/builder/report-generator">Builder</a><span>/</span><strong>Canvas</strong></div>
+            <div className="canvasTitleRow">
+              <div>
+                <p className="eyebrow">Editable workflow</p>
+                <h1>{workflow?.name ?? 'Workflow Canvas'}</h1>
+              </div>
+              <span className={`statusPill ${validation?.valid ? 'valid' : validation ? 'invalid' : ''}`}><i />{validationText}</span>
+            </div>
+            <div className="canvasMeta">
+              <span><strong>{nodes.length}</strong> nodes</span>
+              <span><strong>{edges.length}</strong> connections</span>
+              <span><strong>{outputNodeId ? '1' : '0'}</strong> output</span>
+            </div>
+            {validation && !validation.valid && (
+              <details className="canvasValidation">
+                <summary>Review validation issues</summary>
+                <ol>{validation.errors.map((error, index) => <li key={`${error}-${index}`}>{error}</li>)}</ol>
+              </details>
+            )}
           </section>
-          <div className="toolbarActions">
-            <button type="button" className="secondaryButton" onClick={() => importInputRef.current?.click()} disabled={busy}>Import JSON</button>
-            <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={importFlow} />
-            <button type="button" className="secondaryButton" onClick={exportFlow} disabled={busy}>Export JSON</button>
-            <button type="button" className="secondaryButton" onClick={validate} disabled={busy}>Validate</button>
-            <button type="button" className="primaryButton" onClick={save} disabled={busy}>Save</button>
-            <button type="button" className="primaryButton" onClick={runCanvas} disabled={busy || !validation?.valid}>Run</button>
+
+          <div className="toolbarActions" role="toolbar" aria-label="Canvas actions">
+            <div className="toolbarGroup">
+              <button type="button" className="secondaryButton" onClick={() => importInputRef.current?.click()} disabled={busy}>Import</button>
+              <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={importFlow} />
+              <button type="button" className="secondaryButton" onClick={exportFlow} disabled={busy}>Export</button>
+            </div>
+            <div className="toolbarGroup">
+              <button type="button" className="secondaryButton" onClick={validate} disabled={busy}>Validate</button>
+              <button type="button" className="primaryButton" onClick={save} disabled={busy}>Save <kbd>⌘S</kbd></button>
+              <button type="button" className="runButton" onClick={runCanvas} disabled={busy || !validation?.valid}>Run <kbd>⌘↵</kbd></button>
+            </div>
           </div>
         </div>
 
@@ -359,18 +401,28 @@ function CanvasWorkspace() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onPaneClick={() => setSelectedNode(null)}
           fitView
+          fitViewOptions={{ padding: 0.22 }}
+          snapToGrid
+          snapGrid={[16, 16]}
+          minZoom={0.25}
+          maxZoom={2}
+          selectionOnDrag
+          panOnScroll
+          proOptions={{ hideAttribution: true }}
         >
-          <Controls />
-          <MiniMap />
-          <Background variant={BackgroundVariant.Dots} gap={14} size={1} />
+          <Controls showInteractive={false} />
+          <MiniMap pannable zoomable nodeStrokeWidth={3} />
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
 
-        {notice && <div className="canvasNotice">{notice}</div>}
+        {notice && <div className="canvasNotice" role="status"><i />{notice}<button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}>×</button></div>}
         {run && (
-          <section className="toolbarCard runPanel">
-            <p className="eyebrow">Run Result</p>
-            <h2>{run.status}</h2>
+          <section className="toolbarCard runPanel" aria-live="polite">
+            <button type="button" className="runPanelClose" aria-label="Close run result" onClick={() => setRun(null)}>×</button>
+            <p className="eyebrow">Run result</p>
+            <div className="runPanelHeading"><h2>{run.status}</h2><span className={`runStatus run-${run.status}`}>{run.status}</span></div>
             <p className="muted">Run ID: {run.id}</p>
             <pre>{JSON.stringify({ outputs: run.outputs, steps: run.steps, error: run.error }, null, 2)}</pre>
           </section>
