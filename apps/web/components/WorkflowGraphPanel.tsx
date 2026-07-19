@@ -8,6 +8,7 @@ import {
   Handle,
   MarkerType,
   MiniMap,
+  Panel,
   Position,
   ReactFlow,
 } from "@xyflow/react";
@@ -46,14 +47,27 @@ type WorkflowFlowNode = Node<WorkflowNodeData, "workflowNode">;
 
 const nodeTypes = { workflowNode: WorkflowNodeCard };
 
+function roleLabel(role: WorkflowNodeRole) {
+  if (role === "input") return "IN";
+  if (role === "output") return "OUT";
+  return "FX";
+}
+
 function WorkflowNodeCard({ data, selected }: NodeProps<WorkflowFlowNode>) {
+  const configEntries = Object.keys(data.config).length;
   return (
     <div className={`builderFlowNode builderFlowNode-${data.role}${selected ? " selected" : ""}`}>
       {data.role !== "input" && <Handle type="target" position={Position.Left} isConnectable={false} />}
-      <span className="builderFlowNodeRole">{data.role}</span>
+      <div className="builderFlowNodeTop">
+        <span className="builderFlowNodeIcon" aria-hidden="true">{roleLabel(data.role)}</span>
+        <span className="builderFlowNodeRole">{data.role}</span>
+      </div>
       <strong>{data.label}</strong>
       <small>{data.moduleType}</small>
-      {data.role === "output" && <em>Final output</em>}
+      <div className="builderFlowNodeMeta">
+        <span>{configEntries} config keys</span>
+        {data.role === "output" && <em>Final output</em>}
+      </div>
       {data.role !== "output" && <Handle type="source" position={Position.Right} isConnectable={false} />}
     </div>
   );
@@ -89,7 +103,7 @@ function createNodes(graph: WorkflowGraph, order: string[]): WorkflowFlowNode[] 
     return {
       id: node.id,
       type: "workflowNode",
-      position: { x: 80 + rank * 300, y: 90 + row * 180 },
+      position: { x: 80 + rank * 320, y: 92 + row * 190 },
       data: {
         label: node.id,
         moduleType: node.moduleType,
@@ -106,15 +120,18 @@ function createEdges(graph: WorkflowGraph): Edge[] {
     source: edge.from,
     target: edge.to,
     animated: true,
+    type: "smoothstep",
     markerEnd: { type: MarkerType.ArrowClosed },
   }));
 }
 
 export function WorkflowGraphPanel({ graph, validation }: WorkflowGraphPanelProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [showIssues, setShowIssues] = useState(false);
   const nodes = useMemo(() => graph ? createNodes(graph, validation?.order ?? []) : [], [graph, validation?.order]);
   const edges = useMemo(() => graph ? createEdges(graph) : [], [graph]);
   const selectedNode = graph?.nodes.find((node) => node.id === selectedNodeId) ?? null;
+  const configuredNodeCount = graph?.nodes.filter((node) => Object.keys(node.config ?? {}).length > 0).length ?? 0;
 
   const onNodeClick: NodeMouseHandler<WorkflowFlowNode> = (_event, node) => {
     setSelectedNodeId(node.id);
@@ -122,8 +139,10 @@ export function WorkflowGraphPanel({ graph, validation }: WorkflowGraphPanelProp
 
   if (!graph) {
     return (
-      <section className="builderFlowPanel builderFlowEmpty">
+      <section className="builderFlowPanel builderFlowEmpty" aria-live="polite">
+        <div className="builderFlowEmptyIcon">⌁</div>
         <h2>กำลังโหลด Workflow Graph...</h2>
+        <p>CherryFlow กำลังอ่าน nodes, connections และ validation order</p>
       </section>
     );
   }
@@ -131,43 +150,93 @@ export function WorkflowGraphPanel({ graph, validation }: WorkflowGraphPanelProp
   return (
     <section className="builderFlowPanel">
       <header className="builderFlowHeader">
-        <div>
-          <p className="sectionLabel">WORKFLOW GRAPH</p>
-          <h2>Visual Flow</h2>
-          <span className={validation?.valid ? "builderGraphValid" : "builderGraphInvalid"}>
-            {validation?.valid ? `Graph valid · ${nodes.length} nodes · ${edges.length} connections` : validation?.errors.join(" · ") || "Graph needs attention"}
-          </span>
+        <div className="builderFlowTitle">
+          <p className="sectionLabel">EXECUTION GRAPH</p>
+          <div>
+            <h2>Visual workflow</h2>
+            <span className={validation?.valid ? "builderGraphValid" : "builderGraphInvalid"}>
+              <i />
+              {validation?.valid ? "Graph healthy" : "Needs attention"}
+            </span>
+          </div>
+          <p>Inspect execution order and node configuration before opening the editable canvas.</p>
         </div>
-        <a className="secondaryButton" href="/canvas">Open editable Canvas</a>
+        <div className="builderFlowHeaderActions">
+          <div className="builderFlowStats" aria-label="Graph summary">
+            <span><strong>{nodes.length}</strong> nodes</span>
+            <span><strong>{edges.length}</strong> links</span>
+            <span><strong>{configuredNodeCount}</strong> configured</span>
+          </div>
+          {validation?.errors.length ? (
+            <button type="button" className="secondaryButton" onClick={() => setShowIssues((current) => !current)}>
+              {validation.errors.length} issues
+            </button>
+          ) : null}
+          <a className="primaryButton" href="/canvas">Open editable canvas</a>
+        </div>
       </header>
 
-      <div className="builderFlowCanvas">
+      {showIssues && validation?.errors.length ? (
+        <aside className="builderFlowIssues" role="alert">
+          <div>
+            <strong>Graph validation issues</strong>
+            <span>Fix these items before running or publishing the workflow.</span>
+          </div>
+          <ol>{validation.errors.map((error, index) => <li key={`${error}-${index}`}>{error}</li>)}</ol>
+          <button type="button" aria-label="Close validation issues" onClick={() => setShowIssues(false)}>×</button>
+        </aside>
+      ) : null}
+
+      <div className="builderFlowCanvas" aria-label="Workflow graph canvas">
         <ReactFlow<WorkflowFlowNode, Edge>
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodeClick={onNodeClick}
+          onPaneClick={() => setSelectedNodeId(null)}
           nodesDraggable
           nodesConnectable={false}
           edgesReconnectable={false}
+          selectionOnDrag
+          panOnScroll
           fitView
           fitViewOptions={{ padding: 0.24 }}
-          minZoom={0.35}
-          maxZoom={1.6}
+          minZoom={0.28}
+          maxZoom={1.8}
           proOptions={{ hideAttribution: true }}
         >
+          <Panel position="top-left" className="builderFlowCanvasHint">
+            <span>Drag to explore</span>
+            <kbd>Scroll</kbd>
+            <span>to pan</span>
+          </Panel>
           <Controls showInteractive={false} />
           <MiniMap pannable zoomable nodeStrokeWidth={3} />
-          <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         </ReactFlow>
 
         {selectedNode && (
-          <aside className="builderFlowInspector">
+          <aside className="builderFlowInspector" aria-label={`Node inspector for ${selectedNode.id}`}>
             <button type="button" aria-label="Close node inspector" onClick={() => setSelectedNodeId(null)}>×</button>
-            <p className="sectionLabel">SELECTED NODE</p>
-            <h3>{selectedNode.id}</h3>
+            <div className="builderFlowInspectorHeader">
+              <span className="builderFlowNodeIcon" aria-hidden="true">
+                {selectedNode.moduleType === "core.input" ? "IN" : selectedNode.id === graph.outputNodeId ? "OUT" : "FX"}
+              </span>
+              <div>
+                <p className="sectionLabel">NODE INSPECTOR</p>
+                <h3>{selectedNode.id}</h3>
+              </div>
+            </div>
             <code>{selectedNode.moduleType}</code>
-            <span>Configuration</span>
+            <dl>
+              <div><dt>Role</dt><dd>{selectedNode.moduleType === "core.input" ? "Input" : selectedNode.id === graph.outputNodeId ? "Output" : "Module"}</dd></div>
+              <div><dt>Config keys</dt><dd>{Object.keys(selectedNode.config ?? {}).length}</dd></div>
+              <div><dt>Graph version</dt><dd>{graph.version}</dd></div>
+            </dl>
+            <div className="builderFlowConfigHeader">
+              <span>Configuration</span>
+              <small>Read-only preview</small>
+            </div>
             <pre>{JSON.stringify(selectedNode.config ?? {}, null, 2)}</pre>
           </aside>
         )}
