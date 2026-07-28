@@ -26,11 +26,11 @@ Current version: **0.3.0**
 | UI Schema validation | Available | Allowlisted components and binding validation |
 | Preview, version, publish, rollback | Available | Published apps are available by slug |
 | JSON persistence | Available for MVP | Data is stored in one local JSON file |
-| PostgreSQL persistence | Planned | Phase 1 production milestone |
+| PostgreSQL persistence | Available | Includes user-owned Process Flow storage |
 | Redis distributed workers | Planned | Phase 1 production milestone |
 | MinIO/S3 file storage | Planned | Phase 1 production milestone |
-| Visual drag-and-drop canvas | Planned | Phase 2 milestone |
-| Authentication and RBAC | Planned | Phase 3 milestone |
+| Visual drag-and-drop canvas | Available | Workflow Canvas and Process Flow Builder |
+| Authentication and RBAC | Available | Local login plus optional Google OAuth |
 | ML/DL worker pools and model registry | Planned | Phase 4 direction |
 
 The repository is runnable today, but it is still an **MVP**. Do not treat the current JSON store and in-process execution model as production-ready infrastructure.
@@ -216,6 +216,7 @@ Open:
 |---|---|
 | Homepage | `http://localhost:3000` |
 | AI Builder | `http://localhost:3000/builder` |
+| Process Flow Builder | `http://localhost:3000/process-builder` |
 | API health | `http://localhost:4000/health` |
 | Published application | `http://localhost:3000/apps/{slug}` |
 
@@ -356,10 +357,15 @@ The bridge is explicit by design. CherryFlow does not assume private OpenClaw Ga
 | Variable | Default / example | Purpose |
 |---|---|---|
 | `CHERRYFLOW_API_PORT` | `4000` | API listening port |
+| `CHERRYFLOW_API_ORIGIN` | `http://localhost:4000` | Public API origin used for Google OAuth callback defaults |
 | `CHERRYFLOW_WEB_ORIGIN` | `http://localhost:3000` | Allowed web origin |
 | `NEXT_PUBLIC_CHERRYFLOW_API_URL` | `http://localhost:4000` | API URL used by the browser |
 | `CHERRYFLOW_DATA_FILE` | `./data/cherryflow.json` | MVP JSON persistence file |
 | `CHERRYFLOW_MAX_BODY_MB` | `8` | Maximum JSON request body size |
+| `CHERRYFLOW_GOOGLE_CLIENT_ID` | optional | Google OAuth client ID |
+| `CHERRYFLOW_GOOGLE_CLIENT_SECRET` | optional | Google OAuth client secret; keep server-side |
+| `CHERRYFLOW_GOOGLE_REDIRECT_URI` | `http://localhost:4000/api/auth/google/callback` | Exact callback registered in Google Cloud |
+| `CHERRYFLOW_GOOGLE_DEFAULT_ROLE` | `editor` | Role assigned to first-time Google users |
 | `CHERRYFLOW_AI_PROVIDER` | `local` | `local`, `openai`, or `openclaw` |
 | `OPENAI_BASE_URL` | `http://localhost:8000/v1` | OpenAI-compatible model endpoint |
 | `OPENAI_API_KEY` | optional | Bearer token for the model endpoint |
@@ -919,14 +925,16 @@ Implemented controls:
 - Published slug sanitization
 - Invalid AI output rejection and local fallback
 - Workflow graph cycle and edge validation
+- HttpOnly session cookies with SameSite=Lax
+- Google OAuth state validation and verified-email checks
+- User-owned Process Flow records with owner-scoped reads and writes
 
 Production hardening still required:
 
-- Authentication and session management
-- Workspaces and tenant isolation
-- Role-based access control
+- Workspace and tenant isolation beyond the current user-owned Flow scope
+- Google OAuth production domain/secret rotation operations
 - API key lifecycle management
-- CSRF protection
+- CSRF protection for future state-changing browser forms beyond the OAuth state flow
 - Restrictive production CORS policy
 - Rate limits and quotas
 - Encrypted credential storage

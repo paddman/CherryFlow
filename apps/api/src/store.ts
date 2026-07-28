@@ -3,10 +3,10 @@ import { dirname, resolve } from "node:path";
 import { Pool } from "pg";
 import type { UiSchema, WorkflowInputValues, WorkflowRun } from "@cherryflow/ui-schema";
 import { sanitizeSlug } from "@cherryflow/ui-schema";
-import type { AppVersion, AuthSession, AuthUser, CanvasFlow, ModelRegistryEntry, PublishedApp, StoreData, WorkerPool } from "./types.js";
+import type { AppVersion, AuthSession, AuthUser, CanvasFlow, ModelRegistryEntry, ProcessFlow, PublishedApp, StoreData, WorkerPool } from "./types.js";
 
 const dataFile = resolve(process.env.CHERRYFLOW_DATA_FILE ?? "./data/cherryflow.json");
-const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [], authUsers: [], authSessions: [], models: [], workerPools: [] };
+const emptyData: StoreData = { versions: [], publishedApps: [], runs: [], canvases: [], processFlows: [], authUsers: [], authSessions: [], models: [], workerPools: [] };
 let writeQueue = Promise.resolve();
 let pool: Pool | undefined;
 let postgresReady: Promise<void> | undefined;
@@ -99,6 +99,22 @@ async function ensurePostgres(): Promise<void> {
         role text not null check (role in ('admin', 'editor', 'viewer')),
         created_at timestamptz not null
       );
+      alter table auth_users add column if not exists email text;
+      alter table auth_users add column if not exists display_name text;
+      alter table auth_users add column if not exists avatar_url text;
+      alter table auth_users add column if not exists google_sub text;
+      alter table auth_users add column if not exists auth_provider text not null default 'local';
+      create unique index if not exists auth_users_google_sub_uidx on auth_users (google_sub) where google_sub is not null;
+
+      create table if not exists process_flows (
+        id text primary key,
+        owner_id text not null references auth_users(id) on delete cascade,
+        title text not null,
+        payload jsonb not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+      create index if not exists process_flows_owner_updated_idx on process_flows (owner_id, updated_at desc);
 
       create table if not exists auth_sessions (
         id text primary key,
@@ -180,10 +196,18 @@ async function ensurePostgres(): Promise<void> {
     }
     for (const user of data.authUsers ?? []) {
       await db.query(
-        `insert into auth_users (id, username, password_hash, role, created_at)
-         values ($1, $2, $3, $4, $5)
+        `insert into auth_users (id, username, password_hash, role, created_at, email, display_name, avatar_url, google_sub, auth_provider)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          on conflict (username) do nothing`,
-        [user.id, user.username, user.passwordHash, user.role, user.createdAt],
+        [user.id, user.username, user.passwordHash, user.role, user.createdAt, user.email ?? null, user.displayName ?? null, user.avatarUrl ?? null, user.googleSub ?? null, user.authProvider ?? "local"],
+      );
+    }
+    for (const processFlow of data.processFlows ?? []) {
+      await db.query(
+        `insert into process_flows (id, owner_id, title, payload, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6)
+         on conflict (id) do nothing`,
+        [processFlow.id, processFlow.ownerId, processFlow.title, JSON.stringify(processFlow.payload), processFlow.createdAt, processFlow.updatedAt],
       );
     }
     for (const session of data.authSessions ?? []) {
@@ -261,14 +285,31 @@ function mapCanvas(row: Record<string, unknown>): CanvasFlow {
   };
 }
 
-function mapAuthUser(row: Record<string, unknown>): AuthUser {
+function mapProcessFlow(row: Record<string, unknown>): ProcessFlow {
   return {
     id: String(row.id),
+    ownerId: String(row.owner_id),
+    title: String(row.title),
+    payload: row.payload as Record<string, unknown>,
+    createdAt: new Date(String(row.created_at)).toISOString(),
+    updatedAt: new Date(String(row.updated_at)).toISOString(),
+  };
+}
+
+function mapAuthUser(row: Record<string, unknown>): AuthUser {
+  const user: AuthUser = {
+    id: String(row.id),
     username: String(row.username),
-    passwordHash: String(row.password_hash),
+    passwordHash: String(row.password_hash ?? ""),
     role: row.role as AuthUser["role"],
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
+  if (row.email) user.email = String(row.email);
+  if (row.display_name) user.displayName = String(row.display_name);
+  if (row.avatar_url) user.avatarUrl = String(row.avatar_url);
+  if (row.google_sub) user.googleSub = String(row.google_sub);
+  user.authProvider = row.auth_provider === "google" ? "google" : "local";
+  return user;
 }
 
 function mapAuthSession(row: Record<string, unknown>): AuthSession {
@@ -504,6 +545,91 @@ export async function getCanvas(workflowId: string): Promise<CanvasFlow | undefi
   return result.rows[0] ? mapCanvas(result.rows[0]) : undefined;
 }
 
+export async function listProcessFlows(ownerId: string): Promise<ProcessFlow[]> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.processFlows ?? [])
+      .filter((flow) => flow.ownerId === ownerId)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query(
+    "select * from process_flows where owner_id = $1 order by updated_at desc",
+    [ownerId],
+  );
+  return result.rows.map(mapProcessFlow);
+}
+
+export async function getProcessFlow(ownerId: string, flowId: string): Promise<ProcessFlow | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.processFlows ?? []).find((flow) => flow.ownerId === ownerId && flow.id === flowId);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query(
+    "select * from process_flows where owner_id = $1 and id = $2",
+    [ownerId, flowId],
+  );
+  return result.rows[0] ? mapProcessFlow(result.rows[0]) : undefined;
+}
+
+export async function createProcessFlow(flow: ProcessFlow): Promise<ProcessFlow> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.processFlows = data.processFlows ?? [];
+      data.processFlows.push(flow);
+      return flow;
+    });
+  }
+  await ensurePostgres();
+  await postgresPool().query(
+    `insert into process_flows (id, owner_id, title, payload, created_at, updated_at)
+     values ($1, $2, $3, $4, $5, $6)`,
+    [flow.id, flow.ownerId, flow.title, JSON.stringify(flow.payload), flow.createdAt, flow.updatedAt],
+  );
+  return flow;
+}
+
+export async function updateProcessFlow(ownerId: string, flowId: string, title: string, payload: Record<string, unknown>): Promise<ProcessFlow | undefined> {
+  const updatedAt = new Date().toISOString();
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      const current = (data.processFlows ?? []).find((flow) => flow.ownerId === ownerId && flow.id === flowId);
+      if (!current) return undefined;
+      current.title = title;
+      current.payload = payload;
+      current.updatedAt = updatedAt;
+      return current;
+    });
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query(
+    `update process_flows
+     set title = $3, payload = $4, updated_at = $5
+     where owner_id = $1 and id = $2
+     returning *`,
+    [ownerId, flowId, title, JSON.stringify(payload), updatedAt],
+  );
+  return result.rows[0] ? mapProcessFlow(result.rows[0]) : undefined;
+}
+
+export async function deleteProcessFlow(ownerId: string, flowId: string): Promise<boolean> {
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      const flows = data.processFlows ?? [];
+      const next = flows.filter((flow) => !(flow.ownerId === ownerId && flow.id === flowId));
+      data.processFlows = next;
+      return next.length !== flows.length;
+    });
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query(
+    "delete from process_flows where owner_id = $1 and id = $2",
+    [ownerId, flowId],
+  );
+  return result.rowCount === 1;
+}
+
 export async function countAuthUsers(): Promise<number> {
   if (!postgresEnabled()) {
     const data = await loadJson();
@@ -524,10 +650,12 @@ export async function createAuthUser(user: AuthUser): Promise<AuthUser> {
   }
   await ensurePostgres();
   await postgresPool().query(
-    `insert into auth_users (id, username, password_hash, role, created_at)
-     values ($1, $2, $3, $4, $5)
-     on conflict (username) do update set password_hash = excluded.password_hash, role = excluded.role`,
-    [user.id, user.username, user.passwordHash, user.role, user.createdAt],
+    `insert into auth_users (id, username, password_hash, role, created_at, email, display_name, avatar_url, google_sub, auth_provider)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     on conflict (username) do update set password_hash = excluded.password_hash, role = excluded.role,
+       email = excluded.email, display_name = excluded.display_name, avatar_url = excluded.avatar_url,
+       google_sub = excluded.google_sub, auth_provider = excluded.auth_provider`,
+    [user.id, user.username, user.passwordHash, user.role, user.createdAt, user.email ?? null, user.displayName ?? null, user.avatarUrl ?? null, user.googleSub ?? null, user.authProvider ?? "local"],
   );
   return user;
 }
@@ -540,6 +668,59 @@ export async function getAuthUserByUsername(username: string): Promise<AuthUser 
   await ensurePostgres();
   const result = await postgresPool().query("select * from auth_users where username = $1", [username]);
   return result.rows[0] ? mapAuthUser(result.rows[0]) : undefined;
+}
+
+export async function getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
+  if (!postgresEnabled()) {
+    const normalized = email.trim().toLowerCase();
+    const data = await loadJson();
+    return (data.authUsers ?? []).find((user) => user.email?.toLowerCase() === normalized);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_users where lower(email) = lower($1)", [email]);
+  return result.rows[0] ? mapAuthUser(result.rows[0]) : undefined;
+}
+
+export async function getAuthUserByGoogleSub(googleSub: string): Promise<AuthUser | undefined> {
+  if (!postgresEnabled()) {
+    const data = await loadJson();
+    return (data.authUsers ?? []).find((user) => user.googleSub === googleSub);
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query("select * from auth_users where google_sub = $1", [googleSub]);
+  return result.rows[0] ? mapAuthUser(result.rows[0]) : undefined;
+}
+
+export async function upsertGoogleAuthUser(user: AuthUser): Promise<AuthUser> {
+  if (!user.googleSub) throw new Error("Google subject is required");
+  if (!postgresEnabled()) {
+    return mutateJson((data) => {
+      data.authUsers = data.authUsers ?? [];
+      const current = data.authUsers.find((item) => item.googleSub === user.googleSub);
+      if (current) {
+        if (user.email) current.email = user.email;
+        else delete current.email;
+        if (user.displayName) current.displayName = user.displayName;
+        else delete current.displayName;
+        if (user.avatarUrl) current.avatarUrl = user.avatarUrl;
+        else delete current.avatarUrl;
+        current.authProvider = "google";
+        return current;
+      }
+      data.authUsers.push({ ...user, authProvider: "google" });
+      return user;
+    });
+  }
+  await ensurePostgres();
+  const result = await postgresPool().query(
+    `insert into auth_users (id, username, password_hash, role, created_at, email, display_name, avatar_url, google_sub, auth_provider)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'google')
+     on conflict (google_sub) do update set email = excluded.email, display_name = excluded.display_name,
+       avatar_url = excluded.avatar_url, auth_provider = 'google'
+     returning *`,
+    [user.id, user.username, "", user.role, user.createdAt, user.email ?? null, user.displayName ?? null, user.avatarUrl ?? null, user.googleSub],
+  );
+  return result.rows[0] ? mapAuthUser(result.rows[0]) : { ...user, passwordHash: "", authProvider: "google" };
 }
 
 export async function getAuthUserById(userId: string): Promise<AuthUser | undefined> {

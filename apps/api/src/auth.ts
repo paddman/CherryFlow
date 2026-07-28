@@ -7,15 +7,21 @@ import {
   createAuthSession,
   createAuthUser,
   deleteAuthSession,
+  getAuthUserByEmail,
+  getAuthUserByGoogleSub,
   getAuthSessionByTokenHash,
   getAuthUserById,
   getAuthUserByUsername,
   listAuthUsers,
+  upsertGoogleAuthUser,
 } from "./store.js";
 import type { AuthRole, AuthUser } from "./types.js";
 
 const pbkdf2 = promisify(pbkdf2Callback);
 const cookieName = "cf_session";
+const oauthStateCookieName = "cf_google_oauth_state";
+const oauthReturnCookieName = "cf_google_oauth_return";
+const oauthStateMaxAgeSeconds = 10 * 60;
 const sessionDays = Number(process.env.CHERRYFLOW_SESSION_DAYS ?? 7);
 const roleRank: Record<AuthRole, number> = { viewer: 1, editor: 2, admin: 3 };
 
@@ -23,9 +29,18 @@ function isSecureCookie(): boolean {
   return (process.env.CHERRYFLOW_WEB_ORIGIN ?? "").startsWith("https://");
 }
 
-function sessionCookie(value: string, maxAgeSeconds: number): string {
+function cookie(name: string, value: string, maxAgeSeconds: number, httpOnly = true): string {
   const secure = isSecureCookie() ? "; Secure" : "";
-  return `${cookieName}=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}${secure}`;
+  const httpOnlyFlag = httpOnly ? "; HttpOnly" : "";
+  return `${name}=${encodeURIComponent(value)}${httpOnlyFlag}; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}${secure}`;
+}
+
+function sessionCookie(value: string, maxAgeSeconds: number): string {
+  return cookie(cookieName, value, maxAgeSeconds);
+}
+
+function clearCookie(name: string): string {
+  return cookie(name, "", 0);
 }
 
 function parseCookies(header: string | string[] | undefined): Record<string, string> {
@@ -38,6 +53,62 @@ function parseCookies(header: string | string[] | undefined): Record<string, str
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+interface GoogleProfile {
+  sub?: unknown;
+  email?: unknown;
+  email_verified?: unknown;
+  name?: unknown;
+  picture?: unknown;
+}
+
+function googleConfig() {
+  const apiOrigin = process.env.CHERRYFLOW_API_ORIGIN ?? "http://localhost:4000";
+  const webOrigin = process.env.CHERRYFLOW_WEB_ORIGIN ?? "http://localhost:3000";
+  return {
+    clientId: process.env.CHERRYFLOW_GOOGLE_CLIENT_ID?.trim() ?? "",
+    clientSecret: process.env.CHERRYFLOW_GOOGLE_CLIENT_SECRET?.trim() ?? "",
+    redirectUri: process.env.CHERRYFLOW_GOOGLE_REDIRECT_URI?.trim() || `${apiOrigin.replace(/\/$/, "")}/api/auth/google/callback`,
+    webOrigin: webOrigin.replace(/\/$/, ""),
+  };
+}
+
+export function googleAuthEnabled(): boolean {
+  const config = googleConfig();
+  return Boolean(config.clientId && config.clientSecret && config.redirectUri);
+}
+
+function safeReturnTo(value: string | null | undefined): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/process-builder";
+  return value;
+}
+
+function redirectToWeb(returnTo: string, error?: string): string {
+  const config = googleConfig();
+  const target = new URL(safeReturnTo(returnTo), `${config.webOrigin}/`);
+  if (error) target.searchParams.set("authError", error);
+  return target.toString();
+}
+
+function stateMatches(expected: string | undefined, actual: string | null): boolean {
+  if (!expected || !actual) return false;
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(actual);
+  return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+async function issueSession(user: AuthUser): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  const now = Date.now();
+  await createAuthSession({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    tokenHash: hashToken(token),
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + sessionDays * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  return token;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -69,7 +140,16 @@ async function ensureBootstrapAdmin(): Promise<void> {
 }
 
 function publicUser(user: AuthUser) {
-  return { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt };
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    createdAt: user.createdAt,
+    email: user.email,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    authProvider: user.authProvider ?? "local",
+  };
 }
 
 function isAuthRole(value: unknown): value is AuthRole {
@@ -87,6 +167,8 @@ export async function currentUser(request: IncomingMessage): Promise<AuthUser | 
 
 function requiredRoleFor(pathname: string, method: string): AuthRole | undefined {
   if (pathname === "/api/modules" || pathname === "/api/workflows") return "viewer";
+  if (pathname === "/api/process-flows") return method === "GET" ? "viewer" : "editor";
+  if (/^\/api\/process-flows\/[^/]+$/.test(pathname)) return method === "GET" ? "viewer" : "editor";
   if (pathname === "/api/models" || pathname === "/api/worker-pools") return method === "GET" ? "viewer" : "editor";
   if (pathname === "/api/models/sync") return "editor";
   if (/^\/api\/workflows\/[^/]+$/.test(pathname)) return "viewer";
@@ -112,13 +194,148 @@ export async function authorizeManagementRequest(request: IncomingMessage, respo
   return true;
 }
 
+async function fetchGoogleProfile(code: string): Promise<GoogleProfile> {
+  const config = googleConfig();
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      redirect_uri: config.redirectUri,
+      grant_type: "authorization_code",
+    }).toString(),
+  });
+  const tokenPayload = await tokenResponse.json() as Record<string, unknown>;
+  const accessToken = typeof tokenPayload.access_token === "string" ? tokenPayload.access_token : "";
+  if (!tokenResponse.ok || !accessToken) throw new Error("Google token exchange failed");
+
+  const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  const profile = await profileResponse.json() as GoogleProfile;
+  if (!profileResponse.ok || typeof profile.sub !== "string" || typeof profile.email !== "string" || profile.email_verified !== true) {
+    throw new Error("Google account email is not verified");
+  }
+  return profile;
+}
+
+async function findOrCreateGoogleUser(profile: GoogleProfile): Promise<AuthUser> {
+  const googleSub = String(profile.sub);
+  const email = String(profile.email).trim().toLowerCase();
+  const displayName = typeof profile.name === "string" && profile.name.trim() ? profile.name.trim() : email;
+  const current = await getAuthUserByGoogleSub(googleSub);
+  if (current) {
+    const refreshed: AuthUser = { ...current, email, displayName, googleSub, authProvider: "google" };
+    if (typeof profile.picture === "string" && profile.picture) refreshed.avatarUrl = profile.picture;
+    return upsertGoogleAuthUser(refreshed);
+  }
+
+  const emailUser = await getAuthUserByEmail(email);
+  if (emailUser && emailUser.authProvider !== "google") {
+    throw new Error("An account with this email already exists. Use the existing username and password first.");
+  }
+
+  const configuredRole = process.env.CHERRYFLOW_GOOGLE_DEFAULT_ROLE;
+  const role: AuthRole = isAuthRole(configuredRole) ? configuredRole : "editor";
+  const user: AuthUser = {
+    id: crypto.randomUUID(),
+    username: emailUser?.username ?? email,
+    passwordHash: "",
+    role: emailUser?.role ?? role,
+    createdAt: emailUser?.createdAt ?? new Date().toISOString(),
+    email,
+    displayName,
+    googleSub,
+    authProvider: "google",
+  };
+  if (typeof profile.picture === "string" && profile.picture) user.avatarUrl = profile.picture;
+  return upsertGoogleAuthUser(user);
+}
+
+async function handleGoogleStart(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
+  if (request.method !== "GET") return false;
+  if (!googleAuthEnabled()) {
+    send(response, 503, { error: "Google OAuth is not configured", required: ["CHERRYFLOW_GOOGLE_CLIENT_ID", "CHERRYFLOW_GOOGLE_CLIENT_SECRET"] });
+    return true;
+  }
+  const config = googleConfig();
+  const url = new URL(request.url ?? "/api/auth/google/start", "http://localhost");
+  const state = randomBytes(24).toString("base64url");
+  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  authUrl.search = new URLSearchParams({
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri,
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    nonce: randomBytes(24).toString("base64url"),
+    access_type: "online",
+    prompt: "select_account",
+  }).toString();
+  response.writeHead(302, {
+    location: authUrl.toString(),
+    "set-cookie": [
+      cookie(oauthStateCookieName, state, oauthStateMaxAgeSeconds),
+      cookie(oauthReturnCookieName, safeReturnTo(url.searchParams.get("returnTo")), oauthStateMaxAgeSeconds),
+    ],
+  });
+  response.end();
+  return true;
+}
+
+async function handleGoogleCallback(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
+  if (request.method !== "GET") return false;
+  const config = googleConfig();
+  const url = new URL(request.url ?? "/api/auth/google/callback", "http://localhost");
+  const cookies = parseCookies(request.headers.cookie);
+  const returnTo = safeReturnTo(cookies[oauthReturnCookieName]);
+  const cleanupCookies = [clearCookie(oauthStateCookieName), clearCookie(oauthReturnCookieName)];
+  const fail = (message: string) => {
+    response.writeHead(302, { location: redirectToWeb(returnTo, message), "set-cookie": cleanupCookies });
+    response.end();
+  };
+
+  if (url.searchParams.get("error")) {
+    fail("Google sign-in was cancelled");
+    return true;
+  }
+  if (!stateMatches(cookies[oauthStateCookieName], url.searchParams.get("state"))) {
+    fail("Google sign-in state is invalid or expired");
+    return true;
+  }
+  const code = url.searchParams.get("code");
+  if (!code || !googleAuthEnabled()) {
+    fail("Google OAuth is not configured");
+    return true;
+  }
+
+  try {
+    const user = await findOrCreateGoogleUser(await fetchGoogleProfile(code));
+    const token = await issueSession(user);
+    response.writeHead(302, {
+      location: redirectToWeb(returnTo),
+      "set-cookie": [sessionCookie(token, sessionDays * 24 * 60 * 60), ...cleanupCookies],
+    });
+    response.end();
+  } catch (error) {
+    console.error("Google OAuth callback failed:", error instanceof Error ? error.message : error);
+    fail("Google login failed. Please try again.");
+  }
+  return true;
+}
+
 export async function handleAuthRoutes(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
   if (!pathname.startsWith("/api/auth")) return false;
   await ensureBootstrapAdmin();
 
+  if (pathname === "/api/auth/google/start") return handleGoogleStart(request, response);
+  if (pathname === "/api/auth/google/callback") return handleGoogleCallback(request, response);
+
   if (request.method === "GET" && pathname === "/api/auth/session") {
     const user = await currentUser(request);
-    send(response, 200, { authenticated: Boolean(user), user: user ? publicUser(user) : null });
+    send(response, 200, { authenticated: Boolean(user), user: user ? publicUser(user) : null, googleEnabled: googleAuthEnabled() });
     return true;
   }
 
@@ -129,20 +346,12 @@ export async function handleAuthRoutes(request: IncomingMessage, response: Serve
       send(response, 401, { error: "Invalid username or password" });
       return true;
     }
-    const token = randomBytes(32).toString("base64url");
-    const now = Date.now();
-    await createAuthSession({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      tokenHash: hashToken(token),
-      createdAt: new Date(now).toISOString(),
-      expiresAt: new Date(now + sessionDays * 24 * 60 * 60 * 1000).toISOString(),
-    });
+    const token = await issueSession(user);
     response.writeHead(200, {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": sessionCookie(token, sessionDays * 24 * 60 * 60),
     });
-    response.end(JSON.stringify({ authenticated: true, user: publicUser(user) }));
+    response.end(JSON.stringify({ authenticated: true, user: publicUser(user), googleEnabled: googleAuthEnabled() }));
     return true;
   }
 

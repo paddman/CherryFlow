@@ -22,6 +22,7 @@ export interface StoreData {
   publishedApps: PublishedApp[];
   runs: WorkflowRun[];
   canvases: CanvasFlow[];
+  processFlows: ProcessFlow[];
   authUsers: AuthUser[];
   authSessions: AuthSession[];
   models: ModelRegistryEntry[];
@@ -55,6 +56,15 @@ export interface CanvasFlow {
   updatedAt: string;
 }
 
+export interface ProcessFlow {
+  id: string;
+  ownerId: string;
+  title: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AuthRole = "admin" | "editor" | "viewer";
 
 export interface AuthUser {
@@ -63,6 +73,11 @@ export interface AuthUser {
   passwordHash: string;
   role: AuthRole;
   createdAt: string;
+  email?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  googleSub?: string;
+  authProvider?: "local" | "google";
 }
 
 export interface AuthSession {

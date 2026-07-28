@@ -11,6 +11,7 @@ import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handleMemoryRoutes } from "./routes-memory.js";
 import { handlePublishRoutes } from "./routes-publish.js";
+import { handleProcessFlowRoutes } from "./routes-process.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
 import { startRunWorker } from "./run-service.js";
 
@@ -43,6 +44,7 @@ async function start(): Promise<void> {
       if (await handleModelRegistryRoutes(request, response, url.pathname)) return;
       if (await handleMemoryRoutes(request, response, url.pathname)) return;
       if (await handleAgentRoutes(request, response, url.pathname)) return;
+      if (await handleProcessFlowRoutes(request, response, url.pathname)) return;
       if (await handleBuilderRoutes(request, response, url.pathname)) return;
       if (await handlePublishRoutes(request, response, url.pathname)) return;
       if (await handleRuntimeRoutes(request, response, url.pathname)) return;

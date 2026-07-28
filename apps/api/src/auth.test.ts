@@ -92,6 +92,40 @@ test("auth routes bootstrap an admin, create a session, and clear it on logout",
   });
 });
 
+test("Google OAuth stays opt-in when provider credentials are absent", async () => {
+  await withAuthServer(async (baseUrl) => {
+    const provider = await fetch(`${baseUrl}/api/auth/google/start`);
+    assert.equal(provider.status, 503);
+    assert.equal((await provider.json() as { error: string }).error, "Google OAuth is not configured");
+
+    const session = await fetch(`${baseUrl}/api/auth/session`);
+    assert.equal((await session.json() as { googleEnabled: boolean }).googleEnabled, false);
+  });
+});
+
+test("Google OAuth start validates the configured redirect and stores state cookies", async () => {
+  await withAuthServer(async (baseUrl) => {
+    process.env.CHERRYFLOW_GOOGLE_CLIENT_ID = "google-client-id";
+    process.env.CHERRYFLOW_GOOGLE_CLIENT_SECRET = "google-client-secret";
+    process.env.CHERRYFLOW_GOOGLE_REDIRECT_URI = "http://localhost:4000/api/auth/google/callback";
+    try {
+      const provider = await fetch(`${baseUrl}/api/auth/google/start?returnTo=%2Fbuilder`, { redirect: "manual" });
+      assert.equal(provider.status, 302);
+      assert.match(provider.headers.get("location") ?? "", /^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth/);
+      assert.match(provider.headers.get("location") ?? "", /client_id=google-client-id/);
+      const headers = provider.headers as Headers & { getSetCookie?: () => string[] };
+      const cookies = headers.getSetCookie?.() ?? [];
+      assert.equal(cookies.length, 2);
+      assert.match(cookies[0] ?? "", /cf_google_oauth_state=/);
+      assert.match(cookies[1] ?? "", /cf_google_oauth_return=%2Fbuilder/);
+    } finally {
+      delete process.env.CHERRYFLOW_GOOGLE_CLIENT_ID;
+      delete process.env.CHERRYFLOW_GOOGLE_CLIENT_SECRET;
+      delete process.env.CHERRYFLOW_GOOGLE_REDIRECT_URI;
+    }
+  });
+});
+
 test("RBAC lets admins manage users and prevents viewers from write actions", async () => {
   await withAuthServer(async (baseUrl) => {
     const adminLogin = await fetch(`${baseUrl}/api/auth/login`, {

@@ -20,6 +20,7 @@ import '@xyflow/react/dist/style.css';
 import './process-builder.css';
 
 import { AuthGate } from '../../components/AuthGate';
+import { requestJson } from '../../lib/client';
 import {
   STORAGE_KEY,
   applySwimlaneLayout,
@@ -52,6 +53,13 @@ import {
 } from './process-model';
 
 type SwimlaneConfigPatch = Partial<Omit<SwimlaneConfig, 'theme'>> & { theme?: Partial<SwimlaneConfig['theme']> };
+type ProcessFlowRecord = {
+  id: string;
+  title: string;
+  payload: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
 
 function LaneCard({ data }: NodeProps<LaneFlowNode>) {
   return (
@@ -118,6 +126,11 @@ function ProcessBuilderWorkspace() {
   const [notice, setNotice] = useState('โหลด NT Cloud Service Flow จากไฟล์ HTML ต้นฉบับแล้ว');
   const [running, setRunning] = useState(false);
   const [configJson, setConfigJson] = useState(() => JSON.stringify(template.swimlaneConfig, null, 2));
+  const [flowId, setFlowId] = useState<string | null>(null);
+  const [flows, setFlows] = useState<ProcessFlowRecord[]>([]);
+  const [flowLibraryLoading, setFlowLibraryLoading] = useState(true);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [flowStorageKey, setFlowStorageKey] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement | null>(null);
 
   const lanes = useMemo(() => sortLanes(nodes.filter(isLaneNode), swimlaneConfig), [nodes, swimlaneConfig]);
@@ -141,20 +154,48 @@ function ProcessBuilderWorkspace() {
     setConfigJson(JSON.stringify(swimlaneConfig, null, 2));
   }, [swimlaneConfig]);
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-    try {
-      const parsed = normalizeSavedProcess(JSON.parse(saved));
-      setTitle(parsed.title || template.title);
-      setSwimlaneConfig(parsed.swimlaneConfig);
-      setNodes(parsed.nodes);
-      setEdges(parsed.edges);
-      setNotice('กู้คืน Flow ล่าสุดจากเครื่องนี้แล้ว');
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'พบข้อมูล Flow เดิม แต่ไม่สามารถอ่านได้');
-    }
+  const applySavedProcess = useCallback((value: unknown, savedFlowId: string | null, message: string) => {
+    const parsed = normalizeSavedProcess(value);
+    setFlowId(savedFlowId);
+    setTitle(parsed.title || template.title);
+    setSwimlaneConfig(parsed.swimlaneConfig);
+    setNodes(parsed.nodes);
+    setEdges(parsed.edges);
+    setSelectedNodeId(null);
+    const firstLane = parsed.nodes.find(isLaneNode);
+    if (firstLane) setActiveLaneId(firstLane.id);
+    setNotice(message);
   }, [setEdges, setNodes, template.title]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const restoreLocalDraft = (storageKey: string) => {
+      const saved = window.localStorage.getItem(storageKey);
+      if (!saved || cancelled) return;
+      try {
+        applySavedProcess(JSON.parse(saved), null, 'กู้คืน Flow ล่าสุดจากเครื่องนี้แล้ว · กด Save เพื่อบันทึกเข้าบัญชี');
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'พบข้อมูล Flow เดิม แต่ไม่สามารถอ่านได้');
+      }
+    };
+
+    requestJson<{ userId: string; flows: ProcessFlowRecord[] }>('/api/process-flows')
+      .then((result) => {
+        if (cancelled) return;
+        const storageKey = `${STORAGE_KEY}.${result.userId}`;
+        setFlowStorageKey(storageKey);
+        setFlows(result.flows);
+        const latest = result.flows[0];
+        if (latest) applySavedProcess(latest.payload, latest.id, `โหลด Flow “${latest.title}” จากบัญชีผู้ใช้แล้ว`);
+        else restoreLocalDraft(storageKey);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setFlowLibraryLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [applySavedProcess]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target || connection.source === connection.target) return;
@@ -290,11 +331,65 @@ function ProcessBuilderWorkspace() {
     setNotice('ลบขั้นตอนและเส้นเชื่อมที่เกี่ยวข้องแล้ว');
   }, [selectedNodeId, setEdges, setNodes]);
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
+    if (saveBusy) return;
     const payload: SavedProcess = { version: 2, title, swimlaneConfig, nodes, edges };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    setNotice(`บันทึก Flow แล้ว · ${new Date().toLocaleTimeString('th-TH')}`);
-  }, [edges, nodes, swimlaneConfig, title]);
+    setSaveBusy(true);
+    try {
+      const result = flowId
+        ? await requestJson<{ flow: ProcessFlowRecord }>(`/api/process-flows/${encodeURIComponent(flowId)}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ title, payload }),
+        })
+        : await requestJson<{ flow: ProcessFlowRecord }>('/api/process-flows', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ title, payload }),
+        });
+      setFlowId(result.flow.id);
+      setFlows((current) => [result.flow, ...current.filter((flow) => flow.id !== result.flow.id)].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)));
+      if (flowStorageKey) window.localStorage.setItem(flowStorageKey, JSON.stringify(payload));
+      setNotice(`บันทึก Flow เข้า account แล้ว · ${new Date(result.flow.updatedAt).toLocaleTimeString('th-TH')}`);
+    } catch (error) {
+      if (flowStorageKey) window.localStorage.setItem(flowStorageKey, JSON.stringify(payload));
+      setNotice(error instanceof Error ? `${error.message}${flowStorageKey ? ' · เก็บฉบับล่าสุดไว้ในเครื่องแล้ว' : ''}` : 'บันทึก Flow ไม่สำเร็จ');
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [edges, flowId, flowStorageKey, nodes, saveBusy, swimlaneConfig, title]);
+
+  const newFlow = useCallback(() => {
+    const fresh = createTemplate();
+    setFlowId(null);
+    setTitle(fresh.title);
+    setSwimlaneConfig(fresh.swimlaneConfig);
+    setNodes(fresh.nodes);
+    setEdges(fresh.edges);
+    setSelectedNodeId(null);
+    setActiveLaneId('lane-requester');
+    setNotice('เริ่ม Flow ใหม่แล้ว · กด Save เพื่อสร้าง Flow ในบัญชีของคุณ');
+  }, [setEdges, setNodes]);
+
+  const openFlow = useCallback((flow: ProcessFlowRecord) => {
+    try {
+      applySavedProcess(flow.payload, flow.id, `เปิด Flow “${flow.title}” แล้ว`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'เปิด Flow ไม่สำเร็จ');
+    }
+  }, [applySavedProcess]);
+
+  const deleteFlow = useCallback(async (flow: ProcessFlowRecord) => {
+    if (!window.confirm(`ลบ Flow “${flow.title}” ออกจากบัญชีหรือไม่?`)) return;
+    try {
+      await requestJson(`/api/process-flows/${encodeURIComponent(flow.id)}`, { method: 'DELETE' });
+      setFlows((current) => current.filter((item) => item.id !== flow.id));
+      if (flowId === flow.id) newFlow();
+      else setNotice(`ลบ Flow “${flow.title}” แล้ว`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'ลบ Flow ไม่สำเร็จ');
+    }
+  }, [flowId, newFlow]);
 
   const resetTemplate = useCallback(() => {
     const fresh = createTemplate();
@@ -365,6 +460,22 @@ function ProcessBuilderWorkspace() {
     <div className={`processBuilderPage preset-${swimlaneConfig.layoutPreset}`} style={pageStyle}>
       <aside className="processSidebar">
         <div className="processBrand"><span className="processBrandMark">C</span><div><strong>CherryFlow</strong><small>Business Process Builder</small></div></div>
+        <section className="sidebarSection flowLibrarySection">
+          <div className="sidebarHeading"><span>MY FLOWS</span><button type="button" onClick={newFlow} aria-label="สร้าง Flow ใหม่">＋</button></div>
+          {flowLibraryLoading ? <p className="flowLibraryEmpty">กำลังโหลด Flow ของคุณ...</p> : flows.length === 0 ? <p className="flowLibraryEmpty">ยังไม่มี Flow ใน account<br />สร้างหรือแก้ Flow แล้วกด Save</p> : (
+            <div className="flowLibraryList">
+              {flows.map((flow) => (
+                <article className={flow.id === flowId ? 'flowLibraryItem active' : 'flowLibraryItem'} key={flow.id}>
+                  <button type="button" className="flowLibraryOpen" onClick={() => openFlow(flow)}>
+                    <strong>{flow.title}</strong>
+                    <small>{new Date(flow.updatedAt).toLocaleDateString('th-TH')}</small>
+                  </button>
+                  <button type="button" className="flowLibraryDelete" onClick={() => deleteFlow(flow)} aria-label={`ลบ Flow ${flow.title}`}>×</button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
         <section className="sidebarSection">
           <div className="sidebarHeading"><span>SWIMLANES</span><button type="button" onClick={addLane}>＋</button></div>
           <div className="laneList">
@@ -422,11 +533,12 @@ function ProcessBuilderWorkspace() {
             <div className="processStats"><span>{lanes.length} หน่วยงาน</span><span>{steps.length} ขั้นตอน</span><span>{edges.length} เส้นเชื่อม</span><span>SLA รวม {estimatedHours} ชม.</span></div>
           </div>
           <div className="toolbarButtons">
+            <button type="button" className="ghostButton" onClick={newFlow}>New Flow</button>
             <button type="button" className="ghostButton" onClick={resetTemplate}>โหลด NT Cloud Flow</button>
             <button type="button" className="ghostButton" onClick={() => importRef.current?.click()}>Import</button>
             <input ref={importRef} type="file" accept="application/json" hidden onChange={importFlow} />
             <button type="button" className="ghostButton" onClick={exportFlow}>Export</button>
-            <button type="button" className="ghostButton" onClick={save}>Save</button>
+            <button type="button" className="ghostButton" onClick={save} disabled={saveBusy}>{saveBusy ? 'Saving...' : flowId ? 'Save Changes' : 'Save Flow'}</button>
             <button type="button" className="runButton" onClick={runSimulation} disabled={running || validationErrors.length > 0}>{running ? 'Running...' : 'Run Flow'}</button>
           </div>
         </header>
