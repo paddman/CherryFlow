@@ -8,6 +8,7 @@ import { computeMetrics, summarizeReport } from "./report-ai.js";
 import { buildReportDocument, normalizeReportTemplate } from "./report-document.js";
 import { buildSkillPdfReport, pdfSkillAvailable, pdfSkillScriptPath, reportPdfSkillMode } from "./report-pdf-skill.js";
 import { markdownToText, normalizeReportFormat, renderReport } from "./report-renderer.js";
+import { createAiTaskModuleDefinition } from "./task-ai.js";
 
 function isUploadedFile(value: unknown): value is UploadedFileValue {
   return Boolean(value && typeof value === "object" && "name" in value && ("dataUrl" in value || "objectKey" in value) && "size" in value);
@@ -153,6 +154,7 @@ export const moduleRegistry = new ModuleRegistry()
       }
     },
   })
+  .register(createAiTaskModuleDefinition())
   .register(createCherryAgentModuleDefinition())
   .register(createOpenClawModuleDefinition())
   .register({
