@@ -10,6 +10,7 @@ import { handleMemoryRoutes } from "./routes-memory.js";
 import { handleOverviewRoutes } from "./routes-overview.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
+import { handleTemplateRoutes } from "./routes-templates.js";
 import { getRuntimeStatus } from "./runtime-status.js";
 import { startRunWorker } from "./run-service.js";
 
@@ -34,6 +35,7 @@ async function start(): Promise<void> {
       }
       if (await handleAuthRoutes(request, response, url.pathname)) return;
       if (!await authorizeManagementRequest(request, response, url.pathname)) return;
+      if (await handleTemplateRoutes(request, response, url.pathname)) return;
       if (await handleOverviewRoutes(request, response, url.pathname)) return;
       if (await handleModelRegistryRoutes(request, response, url.pathname)) return;
       if (await handleMemoryRoutes(request, response, url.pathname)) return;
