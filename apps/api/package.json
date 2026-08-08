@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
-    "db:migrate": "tsx src/db/migration-cli.ts up",
-    "db:status": "tsx src/db/migration-cli.ts status",
-    "db:check": "tsx src/db/migration-cli.ts check",
+    "dev": "node --watch --env-file-if-exists=../../.env --import tsx src/server.ts",
+    "start": "node --env-file-if-exists=../../.env --import tsx src/server.ts",
+    "db:migrate": "node --env-file-if-exists=../../.env --import tsx src/db/migration-cli.ts up",
+    "db:status": "node --env-file-if-exists=../../.env --import tsx src/db/migration-cli.ts status",
+    "db:check": "node --env-file-if-exists=../../.env --import tsx src/db/migration-cli.ts check",
     "test": "tsx --test src/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc --noEmit -p tsconfig.json"

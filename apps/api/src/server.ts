@@ -2,16 +2,15 @@ import { createServer } from "node:http";
 import { authorizeManagementRequest, handleAuthRoutes } from "./auth.js";
 import { applyCors } from "./cors.js";
 import { prepareDatabase } from "./db/startup.js";
-import { fileStorageEnabled } from "./file-storage.js";
 import { send } from "./http-utils.js";
-import { memoryEnabled } from "./memory-store.js";
 import { handleModelRegistryRoutes } from "./model-registry.js";
-import { redisQueueEnabled } from "./redis-queue.js";
 import { handleAgentRoutes } from "./routes-agent.js";
 import { handleBuilderRoutes } from "./routes-builder.js";
 import { handleMemoryRoutes } from "./routes-memory.js";
+import { handleOverviewRoutes } from "./routes-overview.js";
 import { handlePublishRoutes } from "./routes-publish.js";
 import { handleRuntimeRoutes } from "./routes-runtime.js";
+import { getRuntimeStatus } from "./runtime-status.js";
 import { startRunWorker } from "./run-service.js";
 
 const port = Number(process.env.CHERRYFLOW_API_PORT ?? 4000);
@@ -29,17 +28,13 @@ async function start(): Promise<void> {
         send(response, 200, {
           status: "ok",
           service: "cherryflow-api",
-          aiProvider: process.env.CHERRYFLOW_AI_PROVIDER ?? "local",
-          embeddingProvider: process.env.CHERRYFLOW_EMBEDDING_PROVIDER ?? (process.env.EMBEDDING_MODEL ? "openai" : "local"),
-          store: (process.env.CHERRYFLOW_STORE ?? (process.env.DATABASE_URL ? "postgres" : "json")),
-          runner: redisQueueEnabled() ? "redis" : "in_process",
-          fileStorage: fileStorageEnabled() ? "s3" : "inline",
-          memory: memoryEnabled() ? "pgvector" : "disabled",
+          ...getRuntimeStatus(),
         });
         return;
       }
       if (await handleAuthRoutes(request, response, url.pathname)) return;
       if (!await authorizeManagementRequest(request, response, url.pathname)) return;
+      if (await handleOverviewRoutes(request, response, url.pathname)) return;
       if (await handleModelRegistryRoutes(request, response, url.pathname)) return;
       if (await handleMemoryRoutes(request, response, url.pathname)) return;
       if (await handleAgentRoutes(request, response, url.pathname)) return;

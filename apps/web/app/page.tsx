@@ -7,7 +7,7 @@ const features = [
   ["ML", "Machine Learning Modules", "รองรับแนวทาง data preparation, classification, regression, clustering และ forecasting"],
   ["DL", "Deep Learning Workers", "แยก GPU worker สำหรับ OCR, vision, speech, embedding และ document intelligence"],
   ["FLOW", "Workflow & Agent", "ประกอบ deterministic node, AI node, agent, database, file และ approval เป็น Flow เดียว"],
-  ["APP", "Website & API Output", "Publish Workflow เป็นเว็บไซต์, internal app, API, file หรือ notification"],
+  ["OPS", "Operational Control Center", "เห็น runtime mode, workflow inventory, versions, models และ worker pools จากข้อมูล API จริง"],
 ] as const;
 
 const useCases = [
@@ -31,40 +31,42 @@ export default function HomePage() {
             <a href="#use-cases">Use Cases</a>
             <a href="#architecture">Architecture</a>
             <Link href="/process-builder" prefetch={false}>Process Flow</Link>
-            <Link className={styles.navButton} href="/builder" prefetch={false}>เปิด Builder</Link>
-            <Link className={styles.navButton} href="/models" prefetch={false}>Models</Link>
+            <Link href="/canvas" prefetch={false}>Canvas</Link>
+            <Link href="/builder" prefetch={false}>Builder</Link>
+            <Link href="/models" prefetch={false}>Models</Link>
+            <Link className={styles.navButton} href="/dashboard" prefetch={false}>Control Center</Link>
           </div>
         </nav>
       </header>
 
       <section className={`${styles.hero} ${styles.shell}`}>
         <div className={styles.heroText}>
-          <span className={styles.eyebrow}><span className={styles.eyebrowDot} />LOCAL QWEN · API-FIRST · ML/DL READY</span>
-          <h1>สร้างระบบ AI ที่รันใน<br /><span className={styles.gradientText}>Infrastructure ของคุณเอง</span></h1>
-          <p className={styles.heroLead}>CherryFlow เชื่อม Local Qwen, OpenAI-compatible API, Workflow, Agent, Machine Learning และ Deep Learning Worker ให้ทำงานร่วมกัน พร้อมเปิดใช้งานเป็น API หรือเว็บไซต์</p>
+          <span className={styles.eyebrow}><span className={styles.eyebrowDot} />LOCAL QWEN · CONTROLLED WORKFLOWS · OPS READY</span>
+          <h1>สร้างและควบคุมระบบ AI<br /><span className={styles.gradientText}>บน Infrastructure ของคุณเอง</span></h1>
+          <p className={styles.heroLead}>CherryFlow เชื่อม Local Qwen, OpenAI-compatible API, Workflow, Agent, Machine Learning และ Deep Learning Worker พร้อม Control Center สำหรับดูสถานะการทำงานจาก API จริง</p>
           <div className={styles.heroActions}>
-            <Link className={styles.primaryButton} href="/builder" prefetch={false}>เปิด Local AI Builder →</Link>
-            <Link className={styles.secondaryButton} href="/process-builder" prefetch={false}>สร้าง Process Flow</Link>
+            <Link className={styles.primaryButton} href="/dashboard" prefetch={false}>เปิด Control Center →</Link>
+            <Link className={styles.secondaryButton} href="/builder" prefetch={false}>สร้าง AI Application</Link>
           </div>
           <div className={styles.trustRow}>
-            <span className={styles.trustItem}><span className={styles.check}>✓</span> Qwen ผ่าน Local API</span>
-            <span className={styles.trustItem}><span className={styles.check}>✓</span> Model-independent</span>
-            <span className={styles.trustItem}><span className={styles.check}>✓</span> CPU / GPU Workers</span>
+            <span className={styles.trustItem}><span className={styles.check}>✓</span> Local model endpoints</span>
+            <span className={styles.trustItem}><span className={styles.check}>✓</span> Validated workflow graph</span>
+            <span className={styles.trustItem}><span className={styles.check}>✓</span> Runtime visibility</span>
           </div>
         </div>
 
         <div className={styles.heroVisual}>
           <div className={styles.heroGlow} />
           <div className={styles.appCard}>
-            <div className={styles.appTopbar}><div className={styles.dots}><span /><span /><span /></div><span className={styles.appStatus}>LOCAL AI ONLINE</span></div>
+            <div className={styles.appTopbar}><div className={styles.dots}><span /><span /><span /></div><span className={styles.appStatus}>PLATFORM CONFIGURED</span></div>
             <div className={styles.canvas}>
-              <div className={styles.canvasHeader}><div className={styles.canvasTitle}><strong>Local Qwen Intelligence Flow</strong><small>API + ML/DL Workers · Validated</small></div><span className={styles.runButton}>Run Flow</span></div>
+              <div className={styles.canvasHeader}><div className={styles.canvasTitle}><strong>Local AI Operations Flow</strong><small>API + Workflow + Worker Pools · Validated</small></div><span className={styles.runButton}>Run Flow</span></div>
               <div className={styles.flow}>
                 {[
                   ["API", "Receive Request", "Form, Webhook or Internal API"],
                   ["QW", "Local Qwen Inference", "vLLM / SGLang / Ollama"],
                   ["GPU", "ML / Deep Learning", "OCR, Vision, Forecasting"],
-                  ["OUT", "Publish Result", "Website, API, File or Notification"],
+                  ["OUT", "Publish & Observe", "App, API, File and Control Center"],
                 ].map(([icon, title, detail]) => (
                   <div className={styles.node} key={title}>
                     <span className={styles.nodeIcon}>{icon}</span>
@@ -75,7 +77,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          <div className={styles.floatingCard}><strong>Local AI execution</strong><div className={styles.progressTrack}><span /></div><small>Qwen + GPU worker running</small></div>
+          <div className={styles.floatingCard}><strong>Operational overview</strong><div className={styles.progressTrack}><span /></div><small>Workflows, models and workers visible</small></div>
         </div>
       </section>
 
@@ -86,7 +88,7 @@ export default function HomePage() {
 
       <section className={styles.section} id="features">
         <div className={styles.shell}>
-          <div className={styles.sectionHeader}><span>Local AI Platform</span><h2>จาก Local Model ไปจนถึง AI Application</h2><p>CherryFlow เป็น orchestration layer ระหว่าง model server, API, workflow, data, agent และ ML/DL worker</p></div>
+          <div className={styles.sectionHeader}><span>Local AI Platform</span><h2>จาก Local Model ไปจนถึงระบบที่ดูแลได้จริง</h2><p>CherryFlow เป็น orchestration layer ระหว่าง model server, API, workflow, data, agent และ ML/DL worker พร้อมหน้าควบคุมการปฏิบัติงาน</p></div>
           <div className={styles.featureGrid}>
             {features.map(([icon, title, description]) => <article className={styles.featureCard} key={title}><span className={styles.featureIcon}>{icon}</span><h3>{title}</h3><p>{description}</p></article>)}
           </div>
@@ -95,7 +97,7 @@ export default function HomePage() {
 
       <section className={`${styles.section} ${styles.workflowSection}`} id="use-cases">
         <div className={styles.shell}>
-          <div className={styles.sectionHeader}><span>AI, ML and Deep Learning</span><h2>ใช้ Local Qwen ร่วมกับโมเดลเฉพาะทาง</h2><p>แยกงานให้ LLM, deterministic module และ ML/DL model ทำในส่วนที่เหมาะสม</p></div>
+          <div className={styles.sectionHeader}><span>AI, ML and Deep Learning</span><h2>ใช้ Local Qwen ร่วมกับโมเดลเฉพาะทาง</h2><p>แยกงานให้ LLM, deterministic module และ ML/DL model ทำในส่วนที่เหมาะสม โดย Workflow Engine ควบคุมลำดับและผลลัพธ์</p></div>
           <div className={styles.workflowGrid}>
             {useCases.map(([icon, title, description]) => <article className={styles.useCase} key={title}><span className={styles.useCaseIcon}>{icon}</span><div><h3>{title}</h3><p>{description}</p></div></article>)}
           </div>
@@ -104,23 +106,23 @@ export default function HomePage() {
 
       <section className={styles.section} id="architecture">
         <div className={styles.shell}>
-          <div className={styles.sectionHeader}><span>API-first Architecture</span><h2>หนึ่ง Platform สำหรับ Local AI ทั้งระบบ</h2><p>Website และ Workflow เรียก CherryFlow API ก่อน ระบบจึง route ไปยัง Qwen, Agent หรือ Worker ที่เหมาะสม</p></div>
+          <div className={styles.sectionHeader}><span>API-first Architecture</span><h2>หนึ่ง Platform สำหรับ Local AI ทั้งระบบ</h2><p>Website และ Workflow เรียก CherryFlow API ก่อน ระบบจึง route ไปยัง Qwen, Agent หรือ Worker ที่เหมาะสม แล้วบันทึกสถานะให้ตรวจสอบได้</p></div>
           <div className={styles.steps}>
             {[
-              ["1", "เชื่อม Local Qwen", "กำหนด OpenAI-compatible endpoint และ model เช่น Qwen บน vLLM หรือ SGLang"],
-              ["2", "ประกอบ AI Workflow", "ต่อ API, data, model, agent, document, ML/DL และ approval modules"],
-              ["3", "เปิดใช้งานจริง", "รันผ่าน API หรือ Publish เป็น internal app และ public website"],
+              ["1", "เชื่อม Local AI", "กำหนด OpenAI-compatible endpoint และ model เช่น Qwen บน vLLM หรือ SGLang"],
+              ["2", "ประกอบและตรวจ Flow", "ต่อ API, data, model, agent, document และ ML/DL modules บน Visual Canvas"],
+              ["3", "Publish และติดตาม", "เปิดเป็น internal app หรือ API พร้อมดู runtime, versions, models และ workers จาก Control Center"],
             ].map(([number, title, description]) => <article className={styles.step} key={number}><span className={styles.stepNumber}>{number}</span><h3>{title}</h3><p>{description}</p></article>)}
           </div>
         </div>
       </section>
 
       <section className={`${styles.cta} ${styles.shell}`}>
-        <div className={styles.ctaCard}><div className={styles.ctaContent}><h2>เริ่มจาก Local Qwen ที่คุณมีอยู่</h2><p>ต่อ endpoint เข้ากับ CherryFlow แล้วสร้าง Workflow, API และ AI Application จาก Infrastructure เดิม</p></div><div className={styles.ctaActions}><Link className={styles.ctaLight} href="/builder" prefetch={false}>เปิด Local AI Builder →</Link></div></div>
+        <div className={styles.ctaCard}><div className={styles.ctaContent}><h2>เริ่มจาก Local Qwen ที่มีอยู่</h2><p>ต่อ endpoint เข้ากับ CherryFlow สร้าง Workflow และ Application แล้วตรวจสถานะจาก Control Center ในหน้าจอเดียว</p></div><div className={styles.ctaActions}><Link className={styles.ctaLight} href="/dashboard" prefetch={false}>เปิด Control Center →</Link></div></div>
       </section>
 
       <footer className={styles.footer}>
-        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/builder" prefetch={false}>Builder</Link><Link href="/process-builder" prefetch={false}>Process Flow</Link><Link href="/models" prefetch={false}>Models</Link><a href="#features">AI Stack</a></div></div>
+        <div className={`${styles.footerInner} ${styles.shell}`}><Link className={styles.brand} href="/"><span className={styles.logo}>C</span><span className={styles.brandText}><strong>CherryFlow</strong><small>Local AI Workflow Platform</small></span></Link><p>Local models. Standard APIs. Controlled execution.</p><div className={styles.footerLinks}><Link href="/dashboard" prefetch={false}>Dashboard</Link><Link href="/builder" prefetch={false}>Builder</Link><Link href="/canvas" prefetch={false}>Canvas</Link><Link href="/models" prefetch={false}>Models</Link></div></div>
       </footer>
     </main>
   );
