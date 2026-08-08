@@ -28,9 +28,28 @@ export interface StoreData {
   workerPools: WorkerPool[];
 }
 
+export interface WorkflowTemplateMetadata {
+  category: string;
+  icon: string;
+  tags: string[];
+  featured: boolean;
+  estimatedMinutes: number;
+  requiresFile: boolean;
+  starterPrompt: string;
+}
+
+export interface WorkflowTemplateSummary extends WorkflowTemplateMetadata {
+  id: string;
+  name: string;
+  description: string;
+  inputCount: number;
+  outputCount: number;
+}
+
 export interface WorkflowDefinition {
   contract: WorkflowContract;
   graph: WorkflowGraph;
+  template?: WorkflowTemplateMetadata;
 }
 
 export interface CanvasNode {

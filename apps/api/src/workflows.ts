@@ -1,4 +1,5 @@
-import type { WorkflowDefinition } from "./types.js";
+import type { WorkflowDefinition, WorkflowTemplateSummary } from "./types.js";
+import { taskWorkflowDefinitions } from "./workflow-templates.js";
 
 const reportGenerator: WorkflowDefinition = {
   contract: {
@@ -80,12 +81,42 @@ const reportGenerator: WorkflowDefinition = {
     ],
     outputNodeId: "output",
   },
+  template: {
+    category: "documents",
+    icon: "RPT",
+    tags: ["Report", "Excel", "PDF", "Executive"],
+    featured: true,
+    estimatedMinutes: 8,
+    requiresFile: true,
+    starterPrompt: "สร้างเว็บไซต์ AI Report Generator ภาษาไทย มีอัปโหลดไฟล์ เลือกรูปแบบรายงาน แสดง Executive Dashboard สถานะการประมวลผล และปุ่มดาวน์โหลด",
+  },
 };
 
-const definitions = new Map<string, WorkflowDefinition>([[reportGenerator.contract.id, reportGenerator]]);
+const allDefinitions = [reportGenerator, ...taskWorkflowDefinitions];
+const definitions = new Map(allDefinitions.map((definition) => [definition.contract.id, definition]));
 
 export function listWorkflows() {
-  return [...definitions.values()].map((definition) => definition.contract);
+  return allDefinitions.map((definition) => definition.contract);
+}
+
+export function listWorkflowTemplates(): WorkflowTemplateSummary[] {
+  return allDefinitions
+    .filter((definition): definition is WorkflowDefinition & { template: NonNullable<WorkflowDefinition["template"]> } => Boolean(definition.template))
+    .map((definition) => ({
+      id: definition.contract.id,
+      name: definition.contract.name,
+      description: definition.contract.description,
+      category: definition.template.category,
+      icon: definition.template.icon,
+      tags: definition.template.tags,
+      featured: definition.template.featured,
+      estimatedMinutes: definition.template.estimatedMinutes,
+      requiresFile: definition.template.requiresFile,
+      starterPrompt: definition.template.starterPrompt,
+      inputCount: definition.contract.inputs.length,
+      outputCount: definition.contract.outputs.length,
+    }))
+    .sort((left, right) => Number(right.featured) - Number(left.featured) || left.name.localeCompare(right.name));
 }
 
 export function getWorkflow(workflowId: string): WorkflowDefinition | undefined {
