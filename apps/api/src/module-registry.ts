@@ -3,6 +3,12 @@ import type { UploadedFileValue } from "@cherryflow/ui-schema";
 import { createCherryAgentModuleDefinition } from "./cherry-agent.js";
 import { createFileOutput } from "./file-storage.js";
 import { extractFileContent } from "./file-content.js";
+import {
+  createDiscordNotificationModuleDefinition,
+  createLineNotificationModuleDefinition,
+  createNotificationDispatchModuleDefinition,
+  createTelegramNotificationModuleDefinition,
+} from "./notification-connectors.js";
 import { createOpenClawModuleDefinition } from "./openclaw-module.js";
 import { computeMetrics, summarizeReport } from "./report-ai.js";
 import { buildReportDocument, normalizeReportTemplate } from "./report-document.js";
@@ -155,6 +161,10 @@ export const moduleRegistry = new ModuleRegistry()
     },
   })
   .register(createAiTaskModuleDefinition())
+  .register(createTelegramNotificationModuleDefinition())
+  .register(createDiscordNotificationModuleDefinition())
+  .register(createLineNotificationModuleDefinition())
+  .register(createNotificationDispatchModuleDefinition())
   .register(createCherryAgentModuleDefinition())
   .register(createOpenClawModuleDefinition())
   .register({
