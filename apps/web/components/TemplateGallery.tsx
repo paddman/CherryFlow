@@ -33,6 +33,7 @@ const categoryLabels: Record<string, string> = {
   "customer-service": "บริการลูกค้า",
   "it-security": "IT และความปลอดภัย",
   "finance-data-project": "การเงิน ข้อมูล และโครงการ",
+  integrations: "Integrations และ ChatOps",
 };
 
 function categoryLabel(value: string): string {
@@ -82,7 +83,7 @@ export function TemplateGallery() {
         <div>
           <p className="templateEyebrow">READY-TO-RUN WORKFLOWS</p>
           <h1>เริ่มงานจาก Template<br /><span>ไม่ต้องต่อกล่องว่างตั้งแต่ศูนย์</span></h1>
-          <p>รวม Workflow งานจริงสำหรับเอกสาร ฝ่ายขาย HR บริการลูกค้า IT Security การเงิน ข้อมูล และบริหารโครงการ ทุก Template เปิดรันทันทีหรือใช้เป็นต้นแบบสร้าง Application ต่อได้</p>
+          <p>รวม Workflow งานจริงสำหรับเอกสาร ฝ่ายขาย HR บริการลูกค้า IT Security การเงิน และ ChatOps พร้อมส่ง Telegram, Discord และ LINE ทุก Template เปิดรันทันทีหรือใช้เป็นต้นแบบสร้าง Application ต่อได้</p>
         </div>
         <div className="templateHeroStats">
           <article><strong>{payload?.total ?? "—"}</strong><span>Templates</span></article>
@@ -94,7 +95,7 @@ export function TemplateGallery() {
       <section className="templateControls" aria-label="Template filters">
         <label className="templateSearch">
           <span>ค้นหา</span>
-          <input value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="เช่น รายงาน, HR, Incident, Proposal" />
+          <input value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="เช่น รายงาน, HR, Incident, Telegram, LINE" />
         </label>
         <div className="templateCategories">
           <button type="button" className={category === "all" ? "active" : ""} onClick={() => setCategory("all")}>ทั้งหมด</button>
@@ -110,7 +111,7 @@ export function TemplateGallery() {
 
       <section className="templateResultsHeader">
         <div><p>{category === "all" ? "ทุกหมวด" : categoryLabel(category)}</p><h2>{templates.length} Workflow ที่ตรงกับการค้นหา</h2></div>
-        <span>Local Qwen เมื่อเชื่อมโมเดล · Deterministic fallback เมื่อ Offline</span>
+        <span>Local Qwen เมื่อเชื่อมโมเดล · Dry Run สำหรับ Connector ภายนอก</span>
       </section>
 
       <section className="templateGrid">
@@ -121,6 +122,7 @@ export function TemplateGallery() {
               <div className="templateBadges">
                 {template.featured && <span className="featuredBadge">แนะนำ</span>}
                 {template.requiresFile && <span>ใช้ไฟล์</span>}
+                {template.category === "integrations" && <span>ส่งภายนอก</span>}
               </div>
             </div>
             <p className="templateCategory">{categoryLabel(template.category)}</p>
