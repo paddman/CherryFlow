@@ -1,6 +1,17 @@
 import { ModuleRegistry, type WorkflowData } from "@cherryflow/workflow-engine";
 import type { UploadedFileValue } from "@cherryflow/ui-schema";
 import { createCherryAgentModuleDefinition } from "./cherry-agent.js";
+import {
+  createCryptoBalanceModuleDefinition,
+  createCryptoCancelOrderModuleDefinition,
+  createCryptoCreateOrderModuleDefinition,
+  createCryptoExchangeCatalogModuleDefinition,
+  createCryptoExchangeInspectModuleDefinition,
+  createCryptoOhlcvModuleDefinition,
+  createCryptoOpenOrdersModuleDefinition,
+  createCryptoPaperOrderModuleDefinition,
+  createCryptoTickerModuleDefinition,
+} from "./crypto-exchange.js";
 import { createFileOutput } from "./file-storage.js";
 import { extractFileContent } from "./file-content.js";
 import {
@@ -161,6 +172,15 @@ export const moduleRegistry = new ModuleRegistry()
     },
   })
   .register(createAiTaskModuleDefinition())
+  .register(createCryptoExchangeCatalogModuleDefinition())
+  .register(createCryptoExchangeInspectModuleDefinition())
+  .register(createCryptoTickerModuleDefinition())
+  .register(createCryptoOhlcvModuleDefinition())
+  .register(createCryptoBalanceModuleDefinition())
+  .register(createCryptoOpenOrdersModuleDefinition())
+  .register(createCryptoPaperOrderModuleDefinition())
+  .register(createCryptoCreateOrderModuleDefinition())
+  .register(createCryptoCancelOrderModuleDefinition())
   .register(createTelegramNotificationModuleDefinition())
   .register(createDiscordNotificationModuleDefinition())
   .register(createLineNotificationModuleDefinition())
