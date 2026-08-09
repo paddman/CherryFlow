@@ -11,6 +11,7 @@
     "db:migrate": "pnpm --filter @cherryflow/api db:migrate",
     "db:status": "pnpm --filter @cherryflow/api db:status",
     "db:check": "pnpm --filter @cherryflow/api db:check",
+    "crypto:install": "pnpm --filter @cherryflow/api add ccxt@^4.5.67",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "engines": {
