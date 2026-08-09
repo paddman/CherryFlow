@@ -7,16 +7,19 @@ import { getWorkflow, listWorkflowTemplates, listWorkflows } from "./workflows.j
 test("ships a broad set of runnable workflow templates", () => {
   const workflows = listWorkflows();
   const templates = listWorkflowTemplates();
-  assert.ok(workflows.length >= 35, `expected at least 35 workflows, received ${workflows.length}`);
+  assert.ok(workflows.length >= 44, `expected at least 44 workflows, received ${workflows.length}`);
   assert.equal(templates.length, workflows.length);
   assert.equal(new Set(workflows.map((workflow) => workflow.id)).size, workflows.length);
   assert.ok(templates.some((template) => template.category === "hr"));
   assert.ok(templates.some((template) => template.category === "it-security"));
   assert.ok(templates.some((template) => template.category === "integrations"));
+  assert.ok(templates.some((template) => template.category === "crypto-trading"));
   assert.ok(templates.some((template) => template.requiresFile));
   assert.ok(templates.some((template) => template.id === "telegram-notification"));
   assert.ok(templates.some((template) => template.id === "discord-webhook-notification"));
   assert.ok(templates.some((template) => template.id === "line-oa-push-notification"));
+  assert.ok(templates.some((template) => template.id === "crypto-paper-order"));
+  assert.ok(templates.some((template) => template.id === "crypto-live-order"));
 });
 
 test("every shipped template has a valid executable graph", () => {
