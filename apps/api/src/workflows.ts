@@ -1,4 +1,5 @@
 import type { WorkflowDefinition, WorkflowTemplateSummary } from "./types.js";
+import { notificationWorkflowDefinitions } from "./notification-workflows.js";
 import { taskWorkflowDefinitions } from "./workflow-templates.js";
 
 const reportGenerator: WorkflowDefinition = {
@@ -92,7 +93,7 @@ const reportGenerator: WorkflowDefinition = {
   },
 };
 
-const allDefinitions = [reportGenerator, ...taskWorkflowDefinitions];
+const allDefinitions = [reportGenerator, ...taskWorkflowDefinitions, ...notificationWorkflowDefinitions];
 const definitions = new Map(allDefinitions.map((definition) => [definition.contract.id, definition]));
 
 export function listWorkflows() {
